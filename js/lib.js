@@ -144,3 +144,20 @@ export function naviguer(parts, query = {}, remplacer = false) {
   if (remplacer) location.replace(cible);
   else location.hash = cible;
 }
+
+/** Points d'un match pour un joueur : barème (tranches sur l'écart entier inférieur) × coefficient, arrondi au dixième. */
+export function pointsMatch(bareme, ecart, victoire, coef) {
+  const e = Math.floor(ecart);
+  const t = bareme.find((b) => e >= (b.ecart_min ?? -Infinity) && e <= (b.ecart_max ?? Infinity));
+  if (!t) return null;
+  const brut = Number(victoire ? t.points_victoire : t.points_defaite) * Number(coef);
+  return Math.sign(brut) * Math.round(Math.abs(brut) * 10) / 10 || 0;
+}
+
+/** Texte de points avec signe : « +7,5 », « −5 ». */
+export function fmtVariation(n) {
+  if (n === null || n === undefined) return '—';
+  const x = Number(n);
+  const t = Math.abs(x).toFixed(1).replace('.0', '').replace('.', ',');
+  return x > 0 ? `+${t}` : x < 0 ? `−${t}` : '0';
+}

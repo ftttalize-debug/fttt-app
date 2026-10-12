@@ -390,6 +390,11 @@ export function PageLicencie({ ctx, id }) {
       <p><${Pastille} genre=${etatCompte(l).genre}>${etatCompte(l).texte}<//>
         ${ctx.roles.filter((r) => r.licencie_id === l.id).map((r) => html` <${Pastille}>${r.role === 'cadre_federal' ? 'Cadre fédéral' : r.role === 'responsable_club' ? 'Responsable · ' + (ctx.clubParId.get(r.club_id)?.nom || '') : 'Juge-arbitre'}<//>`)}</p>
       <p><a href=${lien(['comptes'])}>Gérer les comptes et les accès</a></p>
+      <label class="case"><input type="checkbox" id="masque-public" checked=${!!l.masque_public} onChange=${async (e) => {
+        try { await api.majLicencie(l.id, { masque_public: e.target.checked }); await ctx.recharger(); toast(e.target.checked ? 'Fiche masquée du site public.' : 'Fiche visible sur le site public.'); }
+        catch (err) { toast(msgErreur(err), 'erreur'); }
+      }} /> Masquer du site public (classement, résultats, fiche)</label>
+      <p><a href=${lien(['joueur', l.id])}>Voir la fiche publique</a></p>
       <p><a href=${lien(['journal'], { fiche: l.id })}>Historique des modifications de cette fiche</a></p>
     </section>`}
   </div>`;

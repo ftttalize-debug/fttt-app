@@ -12,6 +12,9 @@ import { PageClubs, PageClub } from './pages/clubs.js';
 import { PageCompetitions, PageCompetition } from './pages/competitions.js';
 import { PageFactures } from './pages/factures.js';
 import { PagePublique } from './pages/public.js';
+import { PageSimulateur } from './pages/simulateur.js';
+import { PageCalendrier } from './pages/calendrier.js';
+import { PageJoueur } from './pages/joueur.js';
 import { PagePoints } from './pages/points.js';
 import { PageComptes } from './pages/comptes.js';
 import { PageJournal } from './pages/journal.js';
@@ -57,6 +60,7 @@ function Cadre({ ctx, route, children }) {
           ${lienNav('competitions', ['competitions'], 'Compétitions', 'competitions')}
           ${gestion && lienNav('factures', ['factures'], 'Factures', 'factures')}
           ${lienNav('classement', ['classement'], 'Classement', 'classement')}
+          ${lienNav('simulateur', ['simulateur'], 'Simulateur', 'points')}
           ${ctx.estCadre && lienNav('renouvellements', ['renouvellements'], 'Renouvellements', 'licencies')}
           ${ctx.estCadre && lienNav('points', ['points'], 'Points', 'journal')}
           ${ctx.estCadre && lienNav('comptes', ['comptes'], 'Comptes', 'profil')}
@@ -96,6 +100,10 @@ function Pages({ ctx, route }) {
   if (p === 'clubs' && gestion) return id ? html`<${PageClub} ctx=${ctx} id=${id} />` : html`<${PageClubs} ctx=${ctx} />`;
   if (p === 'competitions') return id ? html`<${PageCompetition} ctx=${ctx} id=${id} />` : html`<${PageCompetitions} ctx=${ctx} route=${route} />`;
   if (p === 'classement' || p === 'resultats') return html`<${PagePublique} route=${route} connecte=${true} />`;
+  if (p === 'calendrier') return html`<${PageCalendrier} />`;
+  if (p === 'simulateur') return html`<${PageSimulateur} route=${route} />`;
+  if (p === 'joueur' && id) return html`<${PageJoueur} id=${id} />`;
+  if (p === 'connexion') return html`<${PageAccueil} ctx=${ctx} />`;
   if (p === 'renouvellements' && ctx.estCadre) return html`<${PageRenouvellements} ctx=${ctx} />`;
   if (p === 'comptes' && ctx.estCadre) return html`<${PageComptes} ctx=${ctx} />`;
   if (p === 'journal' && ctx.estCadre) return html`<${PageJournal} ctx=${ctx} route=${route} />`;
@@ -145,11 +153,16 @@ function App() {
 
   if (session === undefined) return html`<${Chargement} />`;
   if (!session) {
-    if (route.parts[0] === 'classement' || route.parts[0] === 'resultats') {
+    const p0 = route.parts[0];
+    if (p0 !== 'connexion') {
+      const page = p0 === 'calendrier' ? html`<${PageCalendrier} />`
+        : p0 === 'simulateur' ? html`<${PageSimulateur} route=${route} />`
+        : p0 === 'joueur' && route.parts[1] ? html`<${PageJoueur} id=${route.parts[1]} />`
+        : html`<${PagePublique} route=${route} connecte=${false} />`;
       return html`<div class="appli-public"><div class="drapeau" aria-hidden="true"><span></span><span></span><span></span></div>
         <header class="public-tete"><a href=${lien([])}><img src="assets/logo-complet.png" alt="Fédération Tahitienne de Tennis de Table" /></a>
-          <a class="btn btn-secondaire" href=${lien([])}>Se connecter</a></header>
-        <main class="contenu"><${PagePublique} route=${route} connecte=${false} /></main></div>`;
+          <a class="btn btn-secondaire" href=${lien(['connexion'])}>Espace clubs et arbitres</a></header>
+        <main class="contenu">${page}</main></div>`;
     }
     return html`<${PageConnexion} />`;
   }
@@ -165,6 +178,7 @@ function App() {
     const textes = {
       email_non_confirme: 'Ton adresse e-mail n\'est pas encore confirmée. Clique sur le lien reçu par e-mail, puis réessaie.',
       ambigu: 'Plusieurs fiches portent ton adresse e-mail. Contacte la fédération pour qu\'elle corrige cela.',
+      aucun_acces: 'Les comptes sont réservés aux responsables de club, aux cadres fédéraux et aux juges-arbitres. Les résultats, le classement, le calendrier et le simulateur sont accessibles à tous, sans compte. Si tu dois avoir un accès, demande à la fédération de te l\'attribuer.',
       erreur: 'Le rattachement a échoué. Réessaie dans un instant.'
     };
     const texte = textes[rattachement.raison]

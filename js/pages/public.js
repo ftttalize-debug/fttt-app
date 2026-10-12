@@ -2,7 +2,7 @@
 // la catégorie, les points et les résultats validés sont affichés.
 import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
-import { norm, fmtPts, CATEGORIES, msgErreur } from '../lib.js';
+import { norm, fmtPts, CATEGORIES, msgErreur, lien } from '../lib.js';
 import { Chargement } from '../ui.js';
 
 const libelleMois = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -53,24 +53,31 @@ function Classement() {
     </section>
     <p class="compte-resultats" role="status">${liste.length} joueur${liste.length > 1 ? 's' : ''}</p>
     <ul class="liste">
-      ${liste.slice(0, nb).map((l) => html`<li key=${l.rang + l.nom + l.prenom}>
-        <div class="ligne ligne-classement">
+      ${liste.slice(0, nb).map((l) => html`<li key=${l.id || l.rang + l.nom + l.prenom}>
+        <a class="ligne ligne-classement" href=${lien(['joueur', l.id])}>
           <span class="rang">${l.rang}</span>
           <span class="ligne-nom"><strong>${l.prenom} ${l.nom}</strong><small>${l.club || '—'}</small></span>
           <span><span class="pastille pastille-categorie">${l.categorie}</span></span>
           <span class="ligne-pts">${fmtPts(l.points)} <small>pts</small></span>
-        </div></li>`)}
+        </a></li>`)}
     </ul>
     ${liste.length > nb && html`<button class="btn btn-secondaire suite" type="button" onClick=${() => setNb(nb + PAGE)}>Afficher la suite · ${nb} sur ${liste.length}</button>`}
   </div>`;
 }
 
-function Resultats() {
+/** Noms d'un côté du match, chacun menant à la fiche du joueur (sauf joueur masqué). */
+export function Noms({ r }) {
+  const l = Array.isArray(r.liste) ? r.liste : null;
+  if (!l) return r.joueurs;
+  return l.map((j, i) => html`${i > 0 ? ' / ' : ''}${j.id ? html`<a class="lien-joueur" href=${lien(['joueur', j.id])}>${j.nom}</a>` : j.nom}`);
+}
+
+function Resultats({ initial }) {
   const [comps, setComps] = useState(null);
   const [choix, setChoix] = useState('');
   const [lignes, setLignes] = useState(null);
   const [erreur, setErreur] = useState('');
-  useEffect(() => { api.competitionsPubliques().then((c) => { setComps(c); setChoix(c[0]?.id || ''); }).catch((e) => setErreur(msgErreur(e))); }, []);
+  useEffect(() => { api.competitionsPubliques().then((c) => { setComps(c); setChoix(c.some((x) => x.id === initial) ? initial : c[0]?.id || ''); }).catch((e) => setErreur(msgErreur(e))); }, []);
   useEffect(() => {
     if (!choix) { setLignes([]); return; }
     setLignes(null);
@@ -94,11 +101,18 @@ function Resultats() {
       ${matchs.map((x) => html`<li class="match" key=${x.id}>
         <div class="match-tete"><strong>${x.tour || 'Match'}</strong>${x.double ? html`<span class="pastille">Double</span>` : ''}</div>
         <div class="match-score">
-          <span class=${x.A.sets_gagnes > x.B.sets_gagnes ? 'gagnant' : ''}>${x.A.joueurs}</span>
+          <span class=${x.A.sets_gagnes > x.B.sets_gagnes ? 'gagnant' : ''}><${Noms} r=${x.A} /></span>
           <strong>${x.A.sets_gagnes} - ${x.B.sets_gagnes}</strong>
-          <span class=${x.B.sets_gagnes > x.A.sets_gagnes ? 'gagnant' : ''}>${x.B.joueurs}</span></div>
+          <span class=${x.B.sets_gagnes > x.A.sets_gagnes ? 'gagnant' : ''}><${Noms} r=${x.B} /></span></div>
         <small>${x.manches}</small></li>`)}
     </ul>`}
+  </div>`;
+}
+
+export function OngletsPublics({ actif }) {
+  const o = [['classement', 'Classement'], ['resultats', 'Résultats'], ['calendrier', 'Calendrier'], ['simulateur', 'Simulateur']];
+  return html`<div class="puces" role="group" aria-label="Section">
+    ${o.map(([k, t]) => html`<a class="puce" aria-pressed=${actif === k} href=${'#/' + k}>${t}</a>`)}
   </div>`;
 }
 
@@ -106,10 +120,7 @@ export function PagePublique({ route, connecte }) {
   const onglet = route.parts[0] === 'resultats' ? 'resultats' : 'classement';
   return html`<div class="page">
     <div class="page-tete"><div><h1>${onglet === 'classement' ? 'Classement' : 'Résultats'}</h1><p>Fédération Tahitienne de Tennis de Table</p></div></div>
-    <div class="puces" role="group" aria-label="Section">
-      <a class="puce" aria-pressed=${onglet === 'classement'} href="#/classement">Classement</a>
-      <a class="puce" aria-pressed=${onglet === 'resultats'} href="#/resultats">Résultats</a>
-    </div>
-    ${onglet === 'classement' ? html`<${Classement} />` : html`<${Resultats} />`}
+    <${OngletsPublics} actif=${onglet} />
+    ${onglet === 'classement' ? html`<${Classement} />` : html`<${Resultats} initial=${route.query?.competition} />`}
   </div>`;
 }

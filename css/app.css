@@ -288,3 +288,32 @@ a.puce { display: inline-flex; align-items: center; text-decoration: none; }
 .journal-detail .avant { text-decoration: line-through; color: #8a2b2b; }
 .journal-detail .apres { color: #1d6b3a; font-weight: 600; }
 .carte > .puces + .grille { margin-top: 12px; }
+
+/* Site public : simulateur, calendrier, fiche joueur */
+a.ligne-classement { color: inherit; text-decoration: none; }
+a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(--indigo); }
+.lien-joueur { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+.champ-sim { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.champ-sim input, .champ-sim select { min-height: 48px; font-size: 1.1rem; }
+.sim-matchs { list-style: none; margin: 16px 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.sim-match { display: flex; flex-direction: column; gap: 10px; }
+.sim-res { margin: 0; font-size: 1.05rem; }
+.gain { color: #1d6b3a; }
+.perte { color: #8a2b2b; }
+.sim-total { margin-top: 16px; font-size: 1.1rem; }
+.sim-total p { margin: 4px 0; }
+.bareme-detail { margin-top: 16px; }
+.bareme-detail summary { cursor: pointer; font-weight: 600; min-height: 40px; display: flex; align-items: center; }
+.tableau-defilant { overflow-x: auto; }
+.tableau-bareme { width: 100%; border-collapse: collapse; }
+.tableau-bareme th, .tableau-bareme td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--trait); }
+.liste-comp { list-style: none; margin: 8px 0 20px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.carte-comp { padding: 14px; border: 1px solid var(--trait); border-radius: 12px; background: var(--blanc); }
+.carte-comp p { margin: 6px 0 0; }
+.comp-date { font-weight: 600; }
+.comp-liens { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.stats-fiche .stat-valeur, .stats-fiche .stat-libelle { display: block; }
+.stats-fiche { grid-template-columns: repeat(2, 1fr); }
+.stats-fiche .stat:last-child { grid-column: 1 / -1; }
+.stats-fiche .stat-valeur { font-size: 30px; }
+.pastille-categorie { text-transform: capitalize; }

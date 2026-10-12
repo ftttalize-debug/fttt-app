@@ -74,6 +74,7 @@ export function PageConnexion() {
           onInput=${(e) => setMdp2(e.target.value)} />
       <//>`}
       ${erreur && html`<p class="erreur" role="alert">${erreur}</p>`}
+      ${mode === 'creation' && html`<p class="aide">Réservé aux responsables de club, cadres fédéraux et juges-arbitres, avec l'adresse e-mail enregistrée sur ta fiche. Le classement et les résultats sont publics, sans compte.</p>`}
       ${info && html`<p class="avis" role="status">${info}</p>`}
       <button class="btn btn-primaire btn-plein" type="submit" disabled=${occupe || !email || (mode !== 'oubli' && !mdp) || (mode === 'creation' && !mdp2)}>
         ${occupe ? 'Patiente…' : mode === 'connexion' ? 'Se connecter' : mode === 'creation' ? 'Créer mon compte' : 'Envoyer le lien'}
