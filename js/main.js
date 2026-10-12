@@ -14,6 +14,7 @@ import { PageFactures } from './pages/factures.js';
 import { PagePublique } from './pages/public.js';
 import { PagePoints } from './pages/points.js';
 import { PageComptes } from './pages/comptes.js';
+import { PageJournal } from './pages/journal.js';
 import { PageRenouvellements } from './pages/renouvellements.js';
 import { api } from './data.js';
 
@@ -59,6 +60,7 @@ function Cadre({ ctx, route, children }) {
           ${ctx.estCadre && lienNav('renouvellements', ['renouvellements'], 'Renouvellements', 'licencies')}
           ${ctx.estCadre && lienNav('points', ['points'], 'Points', 'journal')}
           ${ctx.estCadre && lienNav('comptes', ['comptes'], 'Comptes', 'profil')}
+          ${ctx.estCadre && lienNav('journal', ['journal'], 'Journal', 'journal')}
         </nav>
         <div class="compte">
           <div class="compte-role">${libelleRole(ctx)}</div>
@@ -96,6 +98,7 @@ function Pages({ ctx, route }) {
   if (p === 'classement' || p === 'resultats') return html`<${PagePublique} route=${route} connecte=${true} />`;
   if (p === 'renouvellements' && ctx.estCadre) return html`<${PageRenouvellements} ctx=${ctx} />`;
   if (p === 'comptes' && ctx.estCadre) return html`<${PageComptes} ctx=${ctx} />`;
+  if (p === 'journal' && ctx.estCadre) return html`<${PageJournal} ctx=${ctx} route=${route} />`;
   if (p === 'points' && ctx.estCadre) return html`<${PagePoints} ctx=${ctx} />`;
   if (p === 'factures' && gestion) return html`<${PageFactures} ctx=${ctx} route=${route} />`;
   return html`<div class="page"><p class="vide">Page introuvable. <a href=${lien([])}>Retour à l'accueil</a></p></div>`;

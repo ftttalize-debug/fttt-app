@@ -275,3 +275,16 @@ a.puce { display: inline-flex; align-items: center; text-decoration: none; }
 /* Comptes et accès */
 .carte > .aide + .grille { margin-top: 14px; }
 .carte > .puces + input[type="search"] { margin-top: 12px; margin-bottom: 8px; }
+
+/* Journal des modifications */
+.journal { list-style: none; margin: 16px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.journal-ligne { padding: 12px; border: 1px solid var(--trait); border-radius: 12px; background: var(--blanc); }
+.journal-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; justify-content: space-between; }
+.journal-date { color: var(--texte-doux, #555); font-size: .9rem; }
+.journal-phrase { margin: 8px 0 4px; overflow-wrap: anywhere; }
+.journal-detail { display: grid; grid-template-columns: minmax(90px, 35%) 1fr; gap: 4px 12px; margin: 8px 0 0; font-size: .92rem; }
+.journal-detail dt { font-weight: 600; }
+.journal-detail dd { margin: 0; overflow-wrap: anywhere; }
+.journal-detail .avant { text-decoration: line-through; color: #8a2b2b; }
+.journal-detail .apres { color: #1d6b3a; font-weight: 600; }
+.carte > .puces + .grille { margin-top: 12px; }

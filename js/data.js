@@ -166,3 +166,16 @@ export const api = {
     if (error) throw error;
   }
 };
+
+/** Journal des modifications (cadre uniquement) : une page de résultats, du plus récent au plus ancien. */
+export async function lireJournal({ tables, action, du, au, fiche, depuis = 0, pas = 50 }) {
+  let q = sb.from('journal').select('*').order('date_action', { ascending: false }).order('id', { ascending: false });
+  if (tables?.length) q = q.in('table_name', tables);
+  if (action) q = q.eq('action', action);
+  if (du) q = q.gte('date_action', du + 'T00:00:00-10:00');
+  if (au) q = q.lte('date_action', au + 'T23:59:59-10:00');
+  if (fiche) q = q.or(`enregistrement_id.eq.${fiche},apres->>licencie_id.eq.${fiche},avant->>licencie_id.eq.${fiche}`);
+  const { data, error } = await q.range(depuis, depuis + pas - 1);
+  if (error) throw error;
+  return data;
+}

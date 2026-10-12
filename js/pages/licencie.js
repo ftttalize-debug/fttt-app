@@ -390,6 +390,7 @@ export function PageLicencie({ ctx, id }) {
       <p><${Pastille} genre=${etatCompte(l).genre}>${etatCompte(l).texte}<//>
         ${ctx.roles.filter((r) => r.licencie_id === l.id).map((r) => html` <${Pastille}>${r.role === 'cadre_federal' ? 'Cadre fédéral' : r.role === 'responsable_club' ? 'Responsable · ' + (ctx.clubParId.get(r.club_id)?.nom || '') : 'Juge-arbitre'}<//>`)}</p>
       <p><a href=${lien(['comptes'])}>Gérer les comptes et les accès</a></p>
+      <p><a href=${lien(['journal'], { fiche: l.id })}>Historique des modifications de cette fiche</a></p>
     </section>`}
   </div>`;
 }
