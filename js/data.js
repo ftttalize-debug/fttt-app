@@ -1,0 +1,107 @@
+// Accès à la base Supabase : chargement des données et enregistrements.
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.1/+esm';
+import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
+
+export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'implicit' // le lien de réinitialisation fonctionne aussi s'il est ouvert sur un autre appareil
+  }
+});
+
+/** Lit toutes les lignes d'une table, par pages de 1000 (limite de Supabase). */
+async function toutLire(table, ordre) {
+  const pas = 1000;
+  let tout = [];
+  for (let debut = 0; ; debut += pas) {
+    let q = sb.from(table).select('*');
+    if (ordre) q = q.order(ordre);
+    q = q.order('id');
+    const { data, error } = await q.range(debut, debut + pas - 1);
+    if (error) throw error;
+    tout = tout.concat(data);
+    if (data.length < pas) break;
+  }
+  return tout;
+}
+
+export async function chargerTout() {
+  const [saisons, clubs, licencies, licences, roles] = await Promise.all([
+    toutLire('saisons', 'date_debut'),
+    toutLire('clubs', 'nom'),
+    toutLire('licencies', 'nom'),
+    toutLire('licences', null),
+    toutLire('attributions_roles', null)
+  ]);
+  return { saisons, clubs, licencies, licences, roles };
+}
+
+/** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */
+async function modifier(requete) {
+  const { data, error } = await requete.select();
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Modification refusée : droits insuffisants.');
+  return data;
+}
+
+async function appeler(nom, args) {
+  const { data, error } = await sb.rpc(nom, args);
+  if (error) throw error;
+  return data;
+}
+
+export const api = {
+  majLicencie: (id, patch) => modifier(sb.from('licencies').update(patch).eq('id', id)),
+  majLicence: (id, patch) => modifier(sb.from('licences').update(patch).eq('id', id)),
+
+  prendreLicence: (a) =>
+    appeler('prendre_licence', {
+      p_licencie: a.licencie,
+      p_saison: a.saison,
+      p_club: a.club,
+      p_type: a.type,
+      p_cert_type: a.certType || null,
+      p_cert_date: a.certDate || null,
+      p_cert_fourni: !!a.certFourni,
+      p_questionnaire: !!a.questionnaire,
+      p_photo: !!a.photo
+    }),
+
+  creerLicencie: (a) =>
+    appeler('creer_licencie', {
+      p_nom: a.nom,
+      p_prenom: a.prenom,
+      p_naissance: a.naissance,
+      p_sexe: a.sexe,
+      p_club: a.club,
+      p_email: a.email || null,
+      p_telephone: a.telephone || null,
+      p_handicap: !!a.handicap,
+      p_representant: a.representant || null,
+      p_saison: a.saison,
+      p_type: a.type,
+      p_cert_type: a.certType || null,
+      p_cert_date: a.certDate || null,
+      p_cert_fourni: !!a.certFourni,
+      p_questionnaire: !!a.questionnaire,
+      p_photo: !!a.photo
+    }),
+
+  creerClub: async (club) => {
+    const { data, error } = await sb.from('clubs').insert(club).select();
+    if (error) throw error;
+    return data[0];
+  },
+  majClub: (id, patch) => modifier(sb.from('clubs').update(patch).eq('id', id)),
+
+  ajouterRole: async (licencie, role, club) => {
+    const { error } = await sb.from('attributions_roles').insert({ licencie_id: licencie, role, club_id: club });
+    if (error) throw error;
+  },
+  retirerRole: async (id) => {
+    const { error } = await sb.from('attributions_roles').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
