@@ -1,0 +1,171 @@
+// Inscriptions des joueurs à une compétition (responsable de club ou cadre fédéral).
+import { html, useState, useMemo } from '../preact.js';
+import { api } from '../data.js';
+import { lien, norm, fmtPts, fmtDate, nomComplet, aujourdhuiISO, msgErreur } from '../lib.js';
+import { Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
+import { fmtXpf } from './competitions.js';
+
+const TYPE_INSC = { individuelle: 'Simple', paire: 'Double', equipe: 'Équipe' };
+
+function inscriptionsActives(ctx, c) {
+  return ctx.inscriptions.filter((i) => i.competition_id === c.id && i.statut === 'active');
+}
+
+/** Le club (ou le cadre) peut-il encore agir sur les inscriptions ? */
+function peutAgir(ctx, c) {
+  if (ctx.estCadre) return c.statut === 'ouverte' || c.statut === 'cloturee';
+  return c.statut === 'ouverte' && (!c.date_limite_inscription || aujourdhuiISO() <= c.date_limite_inscription);
+}
+
+function licencePourCompetition(l, c) {
+  return l.historique.find((x) => x.saison_id === c.saison_id && x.statut === 'active') || null;
+}
+
+/** Raison pour laquelle un joueur ne peut pas être choisi (null = éligible). */
+function raisonRefus(l, c, dejaPris) {
+  if (l.statut !== 'actif') return 'Non licencié cette saison';
+  const lc = licencePourCompetition(l, c);
+  if (!lc) return 'Pas de licence pour cette saison';
+  if (!c.ouverte_a_tous && lc.type !== 'competition') return 'Licence non compétition';
+  if (dejaPris.has(l.id)) return 'Déjà inscrit';
+  return null;
+}
+
+function DialogueInscription({ ctx, c, clubs, inscription, onFermer }) {
+  const edition = !!inscription;
+  const [clubId, setClubId] = useState(inscription?.club_id || clubs[0]?.id || '');
+  const [sel, setSel] = useState(inscription ? inscription.joueurs.map((j) => j.licencie_id) : []);
+  const [texte, setTexte] = useState('');
+  const [occupe, setOccupe] = useState(false);
+  const max = c.type === 'double' ? 2 : Infinity;
+
+  const dejaPris = useMemo(() => {
+    const s = new Set();
+    for (const i of inscriptionsActives(ctx, c)) {
+      if (inscription && i.id === inscription.id) continue;
+      i.joueurs.forEach((j) => s.add(j.licencie_id));
+    }
+    return s;
+  }, [ctx.inscriptions, c.id]);
+
+  const joueurs = useMemo(() => {
+    const mots = norm(texte).split(/\s+/).filter(Boolean);
+    return ctx.licencies
+      .filter((l) => l.club_id === clubId)
+      .filter((l) => mots.every((m) => norm(`${l.prenom} ${l.nom}`).includes(m)))
+      .map((l) => ({ l, raison: raisonRefus(l, c, dejaPris) }))
+      .sort((a, b) => (a.raison ? 1 : 0) - (b.raison ? 1 : 0) || norm(a.l.nom).localeCompare(norm(b.l.nom)));
+  }, [ctx.licencies, clubId, texte, dejaPris]);
+
+  function basculer(id) {
+    setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length >= max ? s : [...s, id]));
+  }
+  function changerClub(id) { setClubId(id); setSel([]); }
+
+  const valide = c.type === 'double' ? sel.length === 2 : c.type === 'equipe' ? sel.length >= 2 : sel.length >= 1;
+  const aide = c.type === 'double' ? 'Choisis exactement 2 joueurs.' : c.type === 'equipe' ? 'Choisis au moins 2 joueurs. L’ordre de sélection fixe l’ordre dans l’équipe.' : 'Choisis les joueurs du club à inscrire.';
+
+  async function envoyer() {
+    setOccupe(true);
+    try {
+      await api.enregistrerInscription(c.id, clubId, sel, inscription?.id || null);
+      await ctx.recharger();
+      toast(edition ? 'Inscription modifiée.' : 'Inscription enregistrée.');
+      onFermer();
+    } catch (er) {
+      toast(msgErreur(er), 'erreur');
+      setOccupe(false);
+    }
+  }
+
+  return html`<${Dialogue} titre=${edition ? 'Modifier l’inscription' : 'Inscrire des joueurs'} onFermer=${onFermer}>
+    ${clubs.length > 1 && !edition && html`<${Champ} id="i-club" libelle="Club">
+      <select id="i-club" value=${clubId} onChange=${(e) => changerClub(e.target.value)}>
+        ${clubs.map((k) => html`<option key=${k.id} value=${k.id}>${k.nom}</option>`)}
+      </select><//>`}
+    <p class="aide">${aide}</p>
+    <div class="recherche"><${Icone} nom="recherche" taille=${20} /><input type="search" aria-label="Rechercher un joueur" placeholder="Nom ou prénom" value=${texte} onInput=${(e) => setTexte(e.target.value)} /></div>
+    <ul class="choix-joueurs">
+      ${joueurs.length === 0 && html`<li class="vide">Aucun joueur.</li>`}
+      ${joueurs.map(({ l, raison }) => {
+        const rang = sel.indexOf(l.id) + 1;
+        const desactive = !!raison || (!rang && sel.length >= max);
+        return html`<li key=${l.id}>
+          <label class=${'choix-ligne' + (desactive ? ' choix-inactif' : '')}>
+            <input type="checkbox" checked=${rang > 0} disabled=${desactive} onChange=${() => basculer(l.id)} />
+            <span class="choix-nom"><strong>${nomComplet(l)}</strong><small>${raison || `${l.categorie} · ${fmtPts(l.points)} pts`}</small></span>
+            ${c.type === 'equipe' && rang > 0 && html`<${Pastille} genre="actif">N° ${rang}<//>`}
+          </label>
+        </li>`;
+      })}
+    </ul>
+    <p class="avis"><strong>${sel.length}</strong> joueur${sel.length > 1 ? 's' : ''} · montant ${fmtXpf(sel.length * c.montant_xpf)}</p>
+    <div class="actions">
+      <button class="btn btn-primaire" type="button" disabled=${!valide || occupe} onClick=${envoyer}>${occupe ? 'Enregistrement…' : 'Enregistrer'}</button>
+      <button class="btn btn-secondaire" type="button" onClick=${onFermer}>Annuler</button>
+    </div>
+  <//>`;
+}
+
+export function CarteInscriptions({ ctx, c }) {
+  const [dialogue, setDialogue] = useState(null); // { inscription } ou {}
+  const [aAnnuler, setAAnnuler] = useState(null);
+  const [occupe, setOccupe] = useState(false);
+
+  if (c.statut === 'brouillon') return null;
+  const gere = ctx.estCadre ? ctx.clubs.filter((k) => k.actif) : ctx.clubs.filter((k) => ctx.clubsResponsable.includes(k.id));
+  const toutes = inscriptionsActives(ctx, c);
+  const visibles = toutes.slice().sort((a, b) => (ctx.clubParId.get(a.club_id)?.nom || '').localeCompare(ctx.clubParId.get(b.club_id)?.nom || ''));
+  const agir = gere.length > 0 && peutAgir(ctx, c);
+  const clubsPossibles = c.type === 'simple' ? gere.filter((k) => !toutes.some((i) => i.club_id === k.id)) : gere;
+  const nbJoueurs = toutes.reduce((n, i) => n + i.joueurs.length, 0);
+
+  async function annuler() {
+    setOccupe(true);
+    try {
+      await api.annulerInscription(aAnnuler.id);
+      await ctx.recharger();
+      toast('Inscription annulée.');
+      setAAnnuler(null);
+    } catch (er) {
+      toast(msgErreur(er), 'erreur');
+    } finally {
+      setOccupe(false);
+    }
+  }
+
+  return html`<section class="carte" aria-label="Inscriptions">
+    <h2>Inscriptions</h2>
+    ${ctx.estCadre && html`<p class="aide">${toutes.length} inscription${toutes.length > 1 ? 's' : ''} · ${nbJoueurs} joueur${nbJoueurs > 1 ? 's' : ''} · ${fmtXpf(nbJoueurs * c.montant_xpf)} au total</p>`}
+    ${gere.length > 0 && !agir && c.statut === 'ouverte' && html`<p class="avis">La date limite est passée (${fmtDate(c.date_limite_inscription)}). Contacte la fédération pour toute modification.</p>`}
+    ${gere.length > 0 && c.statut !== 'ouverte' && !ctx.estCadre && html`<p class="avis">Les inscriptions sont closes.</p>`}
+    ${visibles.length === 0 ? html`<p class="aide">Aucune inscription pour le moment.</p>` : html`<ul class="historique inscriptions">
+      ${visibles.map((i) => {
+        const club = ctx.clubParId.get(i.club_id);
+        const mienne = ctx.estCadre || ctx.clubsResponsable.includes(i.club_id);
+        return html`<li key=${i.id}>
+          <div style="flex:1;min-width:0">
+            <strong>${club?.nom || '—'}</strong> <${Pastille}>${TYPE_INSC[i.type]}<//>
+            <div class="aide">${i.joueurs.map((j) => { const l = ctx.licencieParId.get(j.licencie_id); return l ? nomComplet(l) : 'Joueur'; }).join(', ')}</div>
+            ${mienne && html`<small>${i.joueurs.length} × ${fmtXpf(c.montant_xpf)} = ${fmtXpf(i.joueurs.length * c.montant_xpf)}</small>`}
+          </div>
+          ${mienne && agir && html`<div class="etiquettes">
+            <button class="btn btn-lien" type="button" onClick=${() => setDialogue({ inscription: i })}>Modifier</button>
+            <button class="btn btn-lien" type="button" onClick=${() => setAAnnuler(i)}>Annuler</button>
+          </div>`}
+        </li>`;
+      })}
+    </ul>`}
+    ${agir && clubsPossibles.length > 0 && html`<div class="actions"><button class="btn btn-primaire" type="button" onClick=${() => setDialogue({})}>
+      ${c.type === 'double' ? 'Inscrire une paire' : c.type === 'equipe' ? 'Inscrire une équipe' : 'Inscrire des joueurs'}</button></div>`}
+    ${agir && c.type === 'simple' && clubsPossibles.length === 0 && html`<p class="aide">Ton club est déjà inscrit : utilise « Modifier » pour changer la liste des joueurs.</p>`}
+    ${dialogue && html`<${DialogueInscription} ctx=${ctx} c=${c} clubs=${dialogue.inscription ? ctx.clubs.filter((k) => k.id === dialogue.inscription.club_id) : clubsPossibles}
+      inscription=${dialogue.inscription} onFermer=${() => setDialogue(null)} />`}
+    ${aAnnuler && html`<${Dialogue} titre="Annuler cette inscription ?" onFermer=${() => setAAnnuler(null)}>
+      <p>L’inscription de ${ctx.clubParId.get(aAnnuler.club_id)?.nom} (${aAnnuler.joueurs.length} joueur${aAnnuler.joueurs.length > 1 ? 's' : ''}) sera annulée.</p>
+      <div class="actions">
+        <button class="btn btn-danger" type="button" disabled=${occupe} onClick=${annuler}>Annuler l’inscription</button>
+        <button class="btn btn-secondaire" type="button" onClick=${() => setAAnnuler(null)}>Garder</button>
+      </div><//>`}
+  </section>`;
+}

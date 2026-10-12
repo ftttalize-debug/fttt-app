@@ -28,15 +28,17 @@ async function toutLire(table, ordre) {
 }
 
 export async function chargerTout() {
-  const [saisons, clubs, licencies, licences, roles, competitions] = await Promise.all([
+  const [saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants] = await Promise.all([
     toutLire('saisons', 'date_debut'),
     toutLire('clubs', 'nom'),
     toutLire('licencies', 'nom'),
     toutLire('licences', null),
     toutLire('attributions_roles', null),
-    toutLire('competitions', 'date_debut')
+    toutLire('competitions', 'date_debut'),
+    toutLire('inscriptions', 'created_at'),
+    toutLire('inscription_participants', null)
   ]);
-  return { saisons, clubs, licencies, licences, roles, competitions };
+  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants };
 }
 
 /** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */
@@ -54,6 +56,10 @@ async function appeler(nom, args) {
 }
 
 export const api = {
+  enregistrerInscription: (competition, club, joueurs, inscription = null) =>
+    appeler('enregistrer_inscription', { p_competition: competition, p_club: club, p_joueurs: joueurs, p_inscription: inscription }),
+  annulerInscription: (id) => appeler('annuler_inscription', { p_inscription: id }),
+
   creerCompetition: async (c) => {
     const { data, error } = await sb.from('competitions').insert(c).select();
     if (error) throw error;

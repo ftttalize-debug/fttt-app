@@ -2,7 +2,7 @@
 import { categorie, ageExact, saisonCourante, aujourdhuiISO } from './lib.js';
 
 export function construireContexte(data, session) {
-  const { saisons, clubs, licencies, licences, roles, competitions = [] } = data;
+  const { saisons, clubs, licencies, licences, roles, competitions = [], inscriptions = [], participants = [] } = data;
   const saison = saisonCourante(saisons);
   const clubParId = new Map(clubs.map((c) => [c.id, c]));
   const saisonParId = new Map(saisons.map((s) => [s.id, s]));
@@ -45,6 +45,10 @@ export function construireContexte(data, session) {
     licencieParId: new Map(liste.map((l) => [l.id, l])),
     roles,
     competitions: competitions.slice().sort((a, b) => b.date_debut.localeCompare(a.date_debut)),
+    inscriptions: inscriptions.map((i) => ({
+      ...i,
+      joueurs: participants.filter((p) => p.inscription_id === i.id).sort((a, b) => (a.rang || 0) - (b.rang || 0))
+    })),
     competitionParId: new Map(competitions.map((c) => [c.id, c])),
     moi: moi ? liste.find((l) => l.id === moi.id) : null,
     mesRoles,
