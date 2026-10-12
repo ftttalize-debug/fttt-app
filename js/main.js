@@ -14,6 +14,7 @@ import { PageFactures } from './pages/factures.js';
 import { PagePublique } from './pages/public.js';
 import { PagePoints } from './pages/points.js';
 import { PageComptes } from './pages/comptes.js';
+import { PageRenouvellements } from './pages/renouvellements.js';
 import { api } from './data.js';
 
 function useRoute() {
@@ -55,6 +56,7 @@ function Cadre({ ctx, route, children }) {
           ${lienNav('competitions', ['competitions'], 'Compétitions', 'competitions')}
           ${gestion && lienNav('factures', ['factures'], 'Factures', 'factures')}
           ${lienNav('classement', ['classement'], 'Classement', 'classement')}
+          ${ctx.estCadre && lienNav('renouvellements', ['renouvellements'], 'Renouvellements', 'licencies')}
           ${ctx.estCadre && lienNav('points', ['points'], 'Points', 'journal')}
           ${ctx.estCadre && lienNav('comptes', ['comptes'], 'Comptes', 'profil')}
         </nav>
@@ -92,6 +94,7 @@ function Pages({ ctx, route }) {
   if (p === 'clubs' && gestion) return id ? html`<${PageClub} ctx=${ctx} id=${id} />` : html`<${PageClubs} ctx=${ctx} />`;
   if (p === 'competitions') return id ? html`<${PageCompetition} ctx=${ctx} id=${id} />` : html`<${PageCompetitions} ctx=${ctx} route=${route} />`;
   if (p === 'classement' || p === 'resultats') return html`<${PagePublique} route=${route} connecte=${true} />`;
+  if (p === 'renouvellements' && ctx.estCadre) return html`<${PageRenouvellements} ctx=${ctx} />`;
   if (p === 'comptes' && ctx.estCadre) return html`<${PageComptes} ctx=${ctx} />`;
   if (p === 'points' && ctx.estCadre) return html`<${PagePoints} ctx=${ctx} />`;
   if (p === 'factures' && gestion) return html`<${PageFactures} ctx=${ctx} route=${route} />`;

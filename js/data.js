@@ -67,6 +67,11 @@ async function appeler(nom, args) {
 }
 
 export const api = {
+  renouvelerLicences: (saison, items) => appeler('renouveler_licences', { p_saison: saison, p_items: items }),
+  creerSaison: async (libelle, debut, fin) => {
+    const { error } = await sb.from('saisons').insert({ libelle, date_debut: debut, date_fin: fin });
+    if (error) throw error;
+  },
   lierMonCompte: () => appeler('lier_mon_compte', {}),
   delierCompte: (id) => appeler('delier_compte', { p_licencie: id }),
   cloturerMois: (mois) => appeler('cloturer_mois', { p_mois: mois }),
