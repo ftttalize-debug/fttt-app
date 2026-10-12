@@ -196,3 +196,28 @@ export function CarteJuges({ ctx, c }) {
     <div class="actions"><button class="btn btn-primaire" type="button" disabled=${!ajout || occupe} onClick=${() => agir(() => api.ajouterJuge(c.id, ajout), 'Juge désigné.')}>Désigner</button></div>
   </section>`;
 }
+
+export function HistoriqueMatchs({ ctx, l }) {
+  const mes = ctx.matchs.filter((m) => m.statut === 'valide' && [...m.A, ...m.B].some((p) => p.licencie_id === l.id))
+    .sort((a, b) => (b.date_validation || '').localeCompare(a.date_validation || ''));
+  if (!mes.length) return null;
+  return html`<section class="carte" aria-label="Historique des matchs">
+    <h2>Historique des matchs</h2>
+    <ul class="matchs">
+      ${mes.map((m) => {
+        const moi = [...m.A, ...m.B].find((p) => p.licencie_id === l.id);
+        const monCote = moi.cote === 'A' ? m.A : m.B;
+        const adverse = moi.cote === 'A' ? m.B : m.A;
+        const mesSets = moi.cote === 'A' ? m.setsA : m.setsB;
+        const sesSets = moi.cote === 'A' ? m.setsB : m.setsA;
+        const comp = ctx.competitionParId.get(m.competition_id);
+        return html`<li class="match" key=${m.id}>
+          <div class="match-tete"><strong>${comp?.nom || '—'}</strong>${m.tour ? html`<small>${m.tour}</small>` : ''}
+            <${Pastille} genre=${mesSets > sesSets ? 'actif' : 'archive'}>${mesSets > sesSets ? 'Victoire' : 'Défaite'}<//></div>
+          <div>contre ${cote(ctx, adverse)} · <strong>${mesSets} - ${sesSets}</strong></div>
+          <small>${m.manches.map((x) => (moi.cote === 'A' ? `${x.score_a}-${x.score_b}` : `${x.score_b}-${x.score_a}`)).join(', ')}${moi.points_finaux !== null && m.type_match === 'simple' ? ' · ' + signe(moi.points_finaux) + ' pts' : ''}</small>
+        </li>`;
+      })}
+    </ul>
+  </section>`;
+}

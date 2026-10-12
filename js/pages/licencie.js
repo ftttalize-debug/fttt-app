@@ -7,6 +7,7 @@ import {
   parseDate, TYPES_LICENCE, TYPES_CERTIFICAT
 } from '../lib.js';
 import { Icone, Pastille, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
+import { HistoriqueMatchs } from './matchs.js';
 
 const CERT_PAR_DEFAUT = { competition: 'competition', loisir: 'loisir', evenementielle: 'evenementiel', dirigeant: '' };
 const STATUT_LICENCE = { active: 'Active', expiree: 'Expirée', annulee: 'Annulée' };
@@ -382,6 +383,7 @@ export function PageLicencie({ ctx, id }) {
     ${!ctx.estCadre && estSoi && html`<${ContactSeul} ctx=${ctx} l=${l} />`}
     <${CarteLicence} ctx=${ctx} l=${l} />
     <${Historique} ctx=${ctx} l=${l} />
+    <${HistoriqueMatchs} ctx=${ctx} l=${l} />
   </div>`;
 }
 

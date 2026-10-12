@@ -11,6 +11,8 @@ import { PageLicencie, PageNouveauLicencie } from './pages/licencie.js';
 import { PageClubs, PageClub } from './pages/clubs.js';
 import { PageCompetitions, PageCompetition } from './pages/competitions.js';
 import { PageFactures } from './pages/factures.js';
+import { PagePublique } from './pages/public.js';
+import { PagePoints } from './pages/points.js';
 
 function useRoute() {
   const [route, setRoute] = useState(lireRoute());
@@ -50,7 +52,8 @@ function Cadre({ ctx, route, children }) {
             : lienNav('profil', ['profil'], 'Ma fiche', 'profil')}
           ${lienNav('competitions', ['competitions'], 'Compétitions', 'competitions')}
           ${gestion && lienNav('factures', ['factures'], 'Factures', 'factures')}
-          ${bientot('Classement', 'classement')}
+          ${lienNav('classement', ['classement'], 'Classement', 'classement')}
+          ${ctx.estCadre && lienNav('points', ['points'], 'Points', 'journal')}
         </nav>
         <div class="compte">
           <div class="compte-role">${libelleRole(ctx)}</div>
@@ -85,6 +88,8 @@ function Pages({ ctx, route }) {
   }
   if (p === 'clubs' && gestion) return id ? html`<${PageClub} ctx=${ctx} id=${id} />` : html`<${PageClubs} ctx=${ctx} />`;
   if (p === 'competitions') return id ? html`<${PageCompetition} ctx=${ctx} id=${id} />` : html`<${PageCompetitions} ctx=${ctx} route=${route} />`;
+  if (p === 'classement' || p === 'resultats') return html`<${PagePublique} route=${route} connecte=${true} />`;
+  if (p === 'points' && ctx.estCadre) return html`<${PagePoints} ctx=${ctx} />`;
   if (p === 'factures' && gestion) return html`<${PageFactures} ctx=${ctx} route=${route} />`;
   return html`<div class="page"><p class="vide">Page introuvable. <a href=${lien([])}>Retour à l'accueil</a></p></div>`;
 }
@@ -114,7 +119,15 @@ function App() {
   useEffect(() => { if (uid) charger(); }, [uid]);
 
   if (session === undefined) return html`<${Chargement} />`;
-  if (!session) return html`<${PageConnexion} />`;
+  if (!session) {
+    if (route.parts[0] === 'classement' || route.parts[0] === 'resultats') {
+      return html`<div class="appli-public"><div class="drapeau" aria-hidden="true"><span></span><span></span><span></span></div>
+        <header class="public-tete"><a href=${lien([])}><img src="assets/logo-complet.png" alt="Fédération Tahitienne de Tennis de Table" /></a>
+          <a class="btn btn-secondaire" href=${lien([])}>Se connecter</a></header>
+        <main class="contenu"><${PagePublique} route=${route} connecte=${false} /></main></div>`;
+    }
+    return html`<${PageConnexion} />`;
+  }
   if (recuperation) return html`<${PageNouveauMotDePasse} onTermine=${() => setRecuperation(false)} />`;
   const deconnexion = html`<button class="btn btn-secondaire" type="button" onClick=${() => sb.auth.signOut()}>Se déconnecter</button>`;
   if (erreur) return html`<${Ecran} titre="Chargement impossible" texte=${erreur} bouton=${html`<button class="btn btn-primaire" type="button" onClick=${charger}>Réessayer</button>`} />`;

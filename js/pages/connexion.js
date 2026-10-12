@@ -67,6 +67,7 @@ export function PageConnexion() {
         onClick=${() => { setMode(mode === 'connexion' ? 'oubli' : 'connexion'); setErreur(''); setInfo(''); }}>
         ${mode === 'connexion' ? 'Mot de passe oublié ?' : 'Retour à la connexion'}
       </button>
+      <a class="btn btn-lien" href="#/classement">Voir le classement public</a>
     </form>
   <//>`;
 }

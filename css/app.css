@@ -262,3 +262,12 @@ dialog.modal::backdrop { background: rgba(75, 42, 31, .45); }
 .manches-saisie li { display: flex; align-items: center; gap: 10px; }
 .manches-saisie li > span:first-child { width: 80px; color: var(--brun-doux); }
 .manches-saisie input { width: 72px; text-align: center; }
+
+/* ---------- Pages publiques ---------- */
+.appli-public { min-height: 100vh; }
+.public-tete { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--blanc); border-bottom: 1px solid var(--trait); }
+.public-tete img { display: block; height: 44px; width: auto; }
+.ligne-classement { display: grid; grid-template-columns: 44px 1fr auto auto; gap: 10px; align-items: center; padding: 12px 14px; background: var(--blanc); border: 1px solid var(--trait); border-radius: 12px; }
+.rang { font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 22px; color: var(--indigo); text-align: center; }
+a.puce { display: inline-flex; align-items: center; text-decoration: none; }
+.page-corps { display: flex; flex-direction: column; gap: 16px; }

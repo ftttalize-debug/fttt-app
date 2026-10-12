@@ -28,7 +28,7 @@ async function toutLire(table, ordre) {
 }
 
 export async function chargerTout() {
-  const [saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges] = await Promise.all([
+  const [saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, mouvements] = await Promise.all([
     toutLire('saisons', 'date_debut'),
     toutLire('clubs', 'nom'),
     toutLire('licencies', 'nom'),
@@ -41,14 +41,15 @@ export async function chargerTout() {
     toutLire('matchs', 'created_at'),
     toutLire('participants_match', null),
     toutLire('manches', null),
-    toutLire('competition_juges', null)
+    toutLire('competition_juges', null),
+    toutLire('mouvements_points', null)
   ]);
   let parametres = {};
   try {
     const { data, error } = await sb.from('parametres').select('*');
     if (!error && data) parametres = Object.fromEntries(data.map((r) => [r.cle, r.valeur]));
   } catch { /* table absente ou non autorisée : valeurs par défaut */ }
-  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, parametres };
+  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, mouvements, parametres };
 }
 
 /** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */
@@ -66,6 +67,12 @@ async function appeler(nom, args) {
 }
 
 export const api = {
+  cloturerMois: (mois) => appeler('cloturer_mois', { p_mois: mois }),
+  passerSaison: () => appeler('passer_saison', {}),
+  moisPublies: () => appeler('mois_publies', {}),
+  classementPublic: (mois) => appeler('classement_public', { p_mois: mois || null }),
+  competitionsPubliques: () => appeler('competitions_publiques', {}),
+  resultatsPublics: (competition) => appeler('resultats_publics', { p_competition: competition }),
   saisirMatch: (a) =>
     appeler('saisir_match', {
       p_competition: a.competition, p_tour: a.tour || '', p_type: a.type, p_sets_gagnants: a.setsGagnants,

@@ -3,7 +3,7 @@ import { FEDERATION } from './config.js';
 import { categorie, ageExact, saisonCourante, aujourdhuiISO } from './lib.js';
 
 export function construireContexte(data, session) {
-  const { saisons, clubs, licencies, licences, roles, competitions = [], inscriptions = [], participants = [], factures = [], matchs = [], pmatchs = [], manches = [], juges = [], parametres = {} } = data;
+  const { saisons, clubs, licencies, licences, roles, competitions = [], inscriptions = [], participants = [], factures = [], matchs = [], pmatchs = [], manches = [], juges = [], mouvements = [], parametres = {} } = data;
   const saison = saisonCourante(saisons);
   const clubParId = new Map(clubs.map((c) => [c.id, c]));
   const saisonParId = new Map(saisons.map((s) => [s.id, s]));
@@ -55,6 +55,7 @@ export function construireContexte(data, session) {
       return { ...f, competition_id: insc?.competition_id || null, clubNom: clubParId.get(f.club_id)?.nom || '—' };
     }),
     juges,
+    mouvements,
     matchs: matchs.map((m) => {
       const pm = pmatchs.filter((p) => p.match_id === m.id);
       const A = pm.filter((p) => p.cote === 'A');
