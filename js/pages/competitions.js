@@ -4,6 +4,7 @@ import { api } from '../data.js';
 import { lien, naviguer, fmtDate, aujourdhuiISO, msgErreur } from '../lib.js';
 import { Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { CarteInscriptions } from './inscriptions.js';
+import { CarteFacturation } from './factures.js';
 
 export const TYPES_COMP = { simple: 'Simple', double: 'Double', equipe: 'Par équipe' };
 const STATUTS = { brouillon: 'Brouillon', ouverte: 'Inscriptions ouvertes', cloturee: 'Inscriptions closes', terminee: 'Terminée' };
@@ -208,6 +209,7 @@ export function PageCompetition({ ctx, id }) {
       ${c && html`<p>${dates(c)}${c.lieu ? ' · ' + c.lieu : ''} · ${TYPES_COMP[c.type]} · Coef. ${Number(c.coefficient).toLocaleString('fr-FR')} · ${fmtXpf(c.montant_xpf)} par participant</p>`}</div></div>
     ${c && ctx.estCadre && html`<${Etat} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteInscriptions} ctx=${ctx} c=${c} />`}
+    ${c && html`<${CarteFacturation} ctx=${ctx} c=${c} />`}
     <${Formulaire} ctx=${ctx} c=${c} />
   </div>`;
 }

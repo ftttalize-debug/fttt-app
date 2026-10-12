@@ -10,6 +10,7 @@ import { PageLicencies } from './pages/licencies.js';
 import { PageLicencie, PageNouveauLicencie } from './pages/licencie.js';
 import { PageClubs, PageClub } from './pages/clubs.js';
 import { PageCompetitions, PageCompetition } from './pages/competitions.js';
+import { PageFactures } from './pages/factures.js';
 
 function useRoute() {
   const [route, setRoute] = useState(lireRoute());
@@ -48,6 +49,7 @@ function Cadre({ ctx, route, children }) {
             ? html`${lienNav('licencies', ['licencies'], 'Licenciés', 'licencies')}${lienNav('clubs', ['clubs'], 'Clubs', 'clubs')}`
             : lienNav('profil', ['profil'], 'Ma fiche', 'profil')}
           ${lienNav('competitions', ['competitions'], 'Compétitions', 'competitions')}
+          ${gestion && lienNav('factures', ['factures'], 'Factures', 'factures')}
           ${bientot('Classement', 'classement')}
         </nav>
         <div class="compte">
@@ -83,6 +85,7 @@ function Pages({ ctx, route }) {
   }
   if (p === 'clubs' && gestion) return id ? html`<${PageClub} ctx=${ctx} id=${id} />` : html`<${PageClubs} ctx=${ctx} />`;
   if (p === 'competitions') return id ? html`<${PageCompetition} ctx=${ctx} id=${id} />` : html`<${PageCompetitions} ctx=${ctx} route=${route} />`;
+  if (p === 'factures' && gestion) return html`<${PageFactures} ctx=${ctx} route=${route} />`;
   return html`<div class="page"><p class="vide">Page introuvable. <a href=${lien([])}>Retour à l'accueil</a></p></div>`;
 }
 

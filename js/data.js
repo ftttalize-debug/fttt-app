@@ -28,7 +28,7 @@ async function toutLire(table, ordre) {
 }
 
 export async function chargerTout() {
-  const [saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants] = await Promise.all([
+  const [saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures] = await Promise.all([
     toutLire('saisons', 'date_debut'),
     toutLire('clubs', 'nom'),
     toutLire('licencies', 'nom'),
@@ -36,9 +36,10 @@ export async function chargerTout() {
     toutLire('attributions_roles', null),
     toutLire('competitions', 'date_debut'),
     toutLire('inscriptions', 'created_at'),
-    toutLire('inscription_participants', null)
+    toutLire('inscription_participants', null),
+    toutLire('factures', 'created_at')
   ]);
-  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants };
+  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures };
 }
 
 /** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */
@@ -56,6 +57,8 @@ async function appeler(nom, args) {
 }
 
 export const api = {
+  genererFactures: (competition) => appeler('generer_factures', { p_competition: competition }),
+  changerStatutFacture: (facture, statut) => appeler('changer_statut_facture', { p_facture: facture, p_statut: statut }),
   enregistrerInscription: (competition, club, joueurs, inscription = null) =>
     appeler('enregistrer_inscription', { p_competition: competition, p_club: club, p_joueurs: joueurs, p_inscription: inscription }),
   annulerInscription: (id) => appeler('annuler_inscription', { p_inscription: id }),
