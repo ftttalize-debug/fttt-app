@@ -9,6 +9,7 @@ import { PageAccueil } from './pages/accueil.js';
 import { PageLicencies } from './pages/licencies.js';
 import { PageLicencie, PageNouveauLicencie } from './pages/licencie.js';
 import { PageClubs, PageClub } from './pages/clubs.js';
+import { PageCompetitions, PageCompetition } from './pages/competitions.js';
 
 function useRoute() {
   const [route, setRoute] = useState(lireRoute());
@@ -46,7 +47,7 @@ function Cadre({ ctx, route, children }) {
           ${gestion
             ? html`${lienNav('licencies', ['licencies'], 'Licenciés', 'licencies')}${lienNav('clubs', ['clubs'], 'Clubs', 'clubs')}`
             : lienNav('profil', ['profil'], 'Ma fiche', 'profil')}
-          ${bientot('Compétitions', 'competitions')}
+          ${lienNav('competitions', ['competitions'], 'Compétitions', 'competitions')}
           ${bientot('Classement', 'classement')}
         </nav>
         <div class="compte">
@@ -81,6 +82,7 @@ function Pages({ ctx, route }) {
     return gestion ? html`<${PageLicencies} ctx=${ctx} route=${route} />` : html`<${PageAccueil} ctx=${ctx} />`;
   }
   if (p === 'clubs' && gestion) return id ? html`<${PageClub} ctx=${ctx} id=${id} />` : html`<${PageClubs} ctx=${ctx} />`;
+  if (p === 'competitions') return id ? html`<${PageCompetition} ctx=${ctx} id=${id} />` : html`<${PageCompetitions} ctx=${ctx} route=${route} />`;
   return html`<div class="page"><p class="vide">Page introuvable. <a href=${lien([])}>Retour à l'accueil</a></p></div>`;
 }
 

@@ -28,14 +28,15 @@ async function toutLire(table, ordre) {
 }
 
 export async function chargerTout() {
-  const [saisons, clubs, licencies, licences, roles] = await Promise.all([
+  const [saisons, clubs, licencies, licences, roles, competitions] = await Promise.all([
     toutLire('saisons', 'date_debut'),
     toutLire('clubs', 'nom'),
     toutLire('licencies', 'nom'),
     toutLire('licences', null),
-    toutLire('attributions_roles', null)
+    toutLire('attributions_roles', null),
+    toutLire('competitions', 'date_debut')
   ]);
-  return { saisons, clubs, licencies, licences, roles };
+  return { saisons, clubs, licencies, licences, roles, competitions };
 }
 
 /** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */
@@ -53,6 +54,17 @@ async function appeler(nom, args) {
 }
 
 export const api = {
+  creerCompetition: async (c) => {
+    const { data, error } = await sb.from('competitions').insert(c).select();
+    if (error) throw error;
+    return data[0];
+  },
+  majCompetition: (id, patch) => modifier(sb.from('competitions').update(patch).eq('id', id)),
+  supprimerCompetition: async (id) => {
+    const { error } = await sb.from('competitions').delete().eq('id', id);
+    if (error) throw error;
+  },
+
   majLicencie: (id, patch) => modifier(sb.from('licencies').update(patch).eq('id', id)),
   majLicence: (id, patch) => modifier(sb.from('licences').update(patch).eq('id', id)),
 
