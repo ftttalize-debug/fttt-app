@@ -69,11 +69,11 @@ export function PageRenouvellements({ ctx }) {
   async function valider() {
     setOccupe(true);
     try {
-      const futur = cochees.find((x) => !x.valable && x.certDate && x.certDate > aujourdhuiISO());
+      const futur = cochees.find((x) => x.certDate && x.certDate > aujourdhuiISO());
       if (futur) { toast(`La date du certificat de ${nomComplet(futur.l)} est dans le futur.`, 'erreur'); setOccupe(false); return; }
       const items = cochees.map((x) => {
-        const reuse = !!x.valable;
-        const saisi = !reuse && !!x.certDate;
+        const saisi = !!x.certDate;                 // un nouveau certificat saisi remplace l'ancien
+        const reuse = !!x.valable && !saisi;
         return {
           licencie_id: x.l.id, club_id: clubId, type: x.type,
           cert_type: reuse ? x.prec.certificat_type : saisi ? x.certType : null,
@@ -116,7 +116,7 @@ export function PageRenouvellements({ ctx }) {
 
     ${clubId && html`<section class="carte" aria-label="Licenciés du club">
       <h2>Personnes à renouveler</h2>
-      <p class="aide">Seules les personnes du club sans licence active pour ${saison?.libelle} sont listées. Le certificat est repris s'il date de moins de 3 ans (moins de 50 ans, type adapté) ; sinon tu peux saisir la date du nouveau certificat (facultatif : laissé vide, il reste « à fournir »). Coche « Questionnaire » quand le formulaire de santé est reçu.</p>
+      <p class="aide">Seules les personnes du club sans licence active pour ${saison?.libelle} sont listées. Le certificat est repris s'il date de moins de 3 ans (moins de 50 ans, type adapté) ; Si la personne a remis un nouveau certificat, saisis son type et sa date : il remplace l'ancien. Sans date, le certificat repris est conservé, ou reste « à fournir » s'il n'y en a pas. Coche « Questionnaire » quand le formulaire de santé est reçu.</p>
       <input type="search" placeholder="Rechercher un nom" value=${q} onInput=${(e) => setQ(e.target.value)} aria-label="Rechercher" />
       <div class="actions">
         <button class="btn btn-secondaire" type="button" onClick=${() => setChoix((x) => { const n = { ...x }; lignes.forEach((r) => { n[r.l.id] = { ...(n[r.l.id] || {}), coche: true }; }); return n; })}>Tout cocher</button>
@@ -132,12 +132,13 @@ export function PageRenouvellements({ ctx }) {
             ${TYPES.map((t) => html`<option key=${t} value=${t}>${TYPES_LICENCE[t]}</option>`)}
           </select>
           ${x.valable ? html`<${Pastille} genre="actif">Certificat valable jusqu'au ${fmtDate(x.valable)}<//>` : html`<${Pastille} genre="alerte">Nouveau certificat à fournir<//>`}
-          ${!x.valable && html`<div style="display:flex;gap:8px;flex-wrap:wrap;width:100%">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;width:100%;align-items:center">
+            <small>${x.valable ? 'Nouveau certificat reçu ?' : 'Date du nouveau certificat :'}</small>
             <select aria-label=${'Type du nouveau certificat de ' + nomComplet(x.l)} value=${x.certType} onChange=${(e) => maj(x.l.id, { certType: e.target.value })}>
               ${Object.entries(CERTS).map(([k, t]) => html`<option key=${k} value=${k}>${t}</option>`)}
             </select>
             <input type="date" aria-label=${'Date du nouveau certificat de ' + nomComplet(x.l)} max=${aujourdhuiISO()} value=${x.certDate} onInput=${(e) => maj(x.l.id, { certDate: e.target.value })} />
-          </div>`}
+          </div>
           <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" checked=${x.questionnaire} onChange=${(e) => maj(x.l.id, { questionnaire: e.target.checked })} /> Questionnaire</label>
         </li>`)}
       </ul>`}
