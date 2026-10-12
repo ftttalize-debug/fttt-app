@@ -2,8 +2,9 @@
 // la catégorie, les points et les résultats validés sont affichés.
 import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
-import { norm, fmtPts, CATEGORIES, msgErreur, lien } from '../lib.js';
+import { norm, fmtPts, fmtVariation, CATEGORIES, msgErreur, lien } from '../lib.js';
 import { Chargement } from '../ui.js';
+import { ListeMatchs, bilanHisto } from './joueur.js';
 
 const libelleMois = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 const PAGE = 50;
@@ -72,7 +73,57 @@ export function Noms({ r }) {
   return l.map((j, i) => html`${i > 0 ? ' / ' : ''}${j.id ? html`<a class="lien-joueur" href=${lien(['joueur', j.id])}>${j.nom}</a>` : j.nom}`);
 }
 
+function PointsCote({ r }) {
+  if (r.points === null || r.points === undefined) return null;
+  return html`<small class=${'pts-cote ' + (Number(r.points) >= 0 ? 'gain' : 'perte')}>${fmtVariation(r.points)} pts</small>`;
+}
+
+function ResultatsJoueur() {
+  const [joueurs, setJoueurs] = useState(null);
+  const [texte, setTexte] = useState('');
+  const [choix, setChoix] = useState(null);
+  const [histo, setHisto] = useState(null);
+  const [erreur, setErreur] = useState('');
+  useEffect(() => { api.joueursAvecResultats().then(setJoueurs).catch((e) => setErreur(msgErreur(e))); }, []);
+  useEffect(() => {
+    if (!choix) return;
+    setHisto(null);
+    api.historiquePublic(choix.id).then(setHisto).catch((e) => setErreur(msgErreur(e)));
+  }, [choix]);
+  const trouves = useMemo(() => {
+    const mots = norm(texte).split(/\s+/).filter(Boolean);
+    if (!mots.length) return [];
+    return (joueurs || []).filter((j) => mots.every((m) => norm(`${j.prenom} ${j.nom}`).includes(m))).slice(0, 8);
+  }, [joueurs, texte]);
+  const bilan = bilanHisto(histo);
+  if (erreur) return html`<p class="erreur" role="alert">${erreur}</p>`;
+  if (joueurs === null) return html`<${Chargement} />`;
+  return html`<div class="page-corps">
+    <section class="carte filtres"><div class="recherche"><input id="rj-recherche" type="search" aria-label="Rechercher un joueur" placeholder="Taper un nom ou un prénom" value=${texte}
+      onInput=${(e) => { setTexte(e.target.value); setChoix(null); }} /></div>
+      ${trouves.length > 0 && !choix && html`<ul class="liste-choix" id="rj-liste">${trouves.map((j) => html`<li key=${j.id}>
+        <button type="button" class="btn btn-secondaire" onClick=${() => { setChoix(j); setTexte(`${j.prenom} ${j.nom}`); }}>${j.prenom} ${j.nom}${j.club ? ' · ' + j.club : ''}</button></li>`)}</ul>`}
+      ${texte && !choix && trouves.length === 0 && html`<p class="aide">Aucun joueur avec des résultats ne correspond.</p>`}
+    </section>
+    ${!choix && html`<p class="vide">Cherche un joueur pour voir tous ses matchs et les points gagnés ou perdus à chaque rencontre.</p>`}
+    ${choix && html`<h2><a href=${lien(['joueur', choix.id])}>${choix.prenom} ${choix.nom}</a></h2>
+      ${histo && html`<p id="rj-bilan"><strong>${bilan.v} victoire${bilan.v > 1 ? 's' : ''} · ${bilan.d} défaite${bilan.d > 1 ? 's' : ''}</strong> · <span class=${bilan.points >= 0 ? 'gain' : 'perte'}>${fmtVariation(bilan.points)} pts au total</span></p>`}
+      <${ListeMatchs} histo=${histo} />`}
+  </div>`;
+}
+
 function Resultats({ initial }) {
+  const [vue, setVue] = useState('competition');
+  return html`<div>
+    <div class="puces vues" role="group" aria-label="Trier les résultats">
+      <button type="button" class="puce" id="vue-comp" aria-pressed=${vue === 'competition'} onClick=${() => setVue('competition')}>Par compétition</button>
+      <button type="button" class="puce" id="vue-joueur" aria-pressed=${vue === 'joueur'} onClick=${() => setVue('joueur')}>Par joueur</button>
+    </div>
+    ${vue === 'competition' ? html`<${ResultatsCompetition} initial=${initial} />` : html`<${ResultatsJoueur} />`}
+  </div>`;
+}
+
+function ResultatsCompetition({ initial }) {
   const [comps, setComps] = useState(null);
   const [choix, setChoix] = useState('');
   const [lignes, setLignes] = useState(null);
@@ -101,9 +152,9 @@ function Resultats({ initial }) {
       ${matchs.map((x) => html`<li class="match" key=${x.id}>
         <div class="match-tete"><strong>${x.tour || 'Match'}</strong>${x.double ? html`<span class="pastille">Double</span>` : ''}</div>
         <div class="match-score">
-          <span class=${x.A.sets_gagnes > x.B.sets_gagnes ? 'gagnant' : ''}><${Noms} r=${x.A} /></span>
+          <span class=${x.A.sets_gagnes > x.B.sets_gagnes ? 'gagnant' : ''}><${Noms} r=${x.A} /><${PointsCote} r=${x.A} /></span>
           <strong>${x.A.sets_gagnes} - ${x.B.sets_gagnes}</strong>
-          <span class=${x.B.sets_gagnes > x.A.sets_gagnes ? 'gagnant' : ''}><${Noms} r=${x.B} /></span></div>
+          <span class=${x.B.sets_gagnes > x.A.sets_gagnes ? 'gagnant' : ''}><${Noms} r=${x.B} /><${PointsCote} r=${x.B} /></span></div>
         <small>${x.manches}</small></li>`)}
     </ul>`}
   </div>`;

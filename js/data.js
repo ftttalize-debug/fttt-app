@@ -81,6 +81,7 @@ export const api = {
   calendrierPublic: () => appeler('calendrier_public', {}),
   fichePublique: (id) => appeler('fiche_joueur_publique', { p_id: id }),
   historiquePublic: (id) => appeler('historique_joueur', { p_id: id }),
+  joueursAvecResultats: () => appeler('joueurs_avec_resultats', {}),
   baremePublic: () => appeler('bareme_public', {}),
   competitionsPubliques: () => appeler('competitions_publiques', {}),
   resultatsPublics: (competition) => appeler('resultats_publics', { p_competition: competition }),
