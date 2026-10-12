@@ -39,7 +39,12 @@ export async function chargerTout() {
     toutLire('inscription_participants', null),
     toutLire('factures', 'created_at')
   ]);
-  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures };
+  let parametres = {};
+  try {
+    const { data, error } = await sb.from('parametres').select('*');
+    if (!error && data) parametres = Object.fromEntries(data.map((r) => [r.cle, r.valeur]));
+  } catch { /* table absente ou non autorisée : valeurs par défaut */ }
+  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, parametres };
 }
 
 /** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */

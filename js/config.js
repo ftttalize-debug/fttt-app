@@ -4,13 +4,14 @@
 export const SUPABASE_URL = 'https://ksanjwtvkxtodxkbdmeq.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_3DiOJ94zpHrUdBYFW6pB1A_esUCn0qM';
 
-// Coordonnées de la fédération imprimées sur les factures. Les lignes vides ne sont pas imprimées.
+// Coordonnées par défaut imprimées sur les factures. Les coordonnées complètes (adresse, numéro Tahiti,
+// coordonnées bancaires) sont lues dans la base (table « parametres »), pas dans ce fichier public.
 export const FEDERATION = {
   nom: 'Fédération Tahitienne de Tennis de Table',
-  adresse: [],            // ex. ['BP 1234', '98713 Papeete, Tahiti']
-  email: 'fttt.alize@gmail.com',
+  adresse: [],
+  email: '',
   telephone: '',
-  numeroTahiti: '',       // numéro Tahiti / RIDET
-  paiement: [],           // ex. ['Virement : IBAN …', 'Chèque à l\'ordre de la FTTT']
-  mentions: ''            // ex. mention de TVA
+  numeroTahiti: '',
+  paiement: [],
+  mentions: ''
 };

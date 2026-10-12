@@ -1,5 +1,4 @@
 // Génération du PDF d'une facture, dans le navigateur (jsPDF chargé à la demande).
-import { FEDERATION } from './config.js';
 import { fmtDate, nomComplet } from './lib.js';
 
 const JSPDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -32,7 +31,7 @@ const xpf = (n) => t(`${Number(n || 0).toLocaleString('fr-FR')} F CFP`);
 /** Construit le document PDF. `donnees` : { facture, club, competition, joueurs: [{nom, points}] } */
 export async function construireFacture(donnees) {
   const { jsPDF } = await chargerJsPdf();
-  const { facture, club, competition, joueurs } = donnees;
+  const { facture, club, competition, joueurs, federation: FEDERATION } = donnees;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const L = 18, R = 192;
   const img = await logo();
@@ -112,6 +111,6 @@ export async function telechargerFacture(ctx, facture) {
     const l = ctx.licencieParId.get(j.licencie_id);
     return { nom: l ? nomComplet(l) : 'Joueur' };
   });
-  const doc = await construireFacture({ facture, club, competition, joueurs });
+  const doc = await construireFacture({ facture, club, competition, joueurs, federation: ctx.federation });
   doc.save(`${facture.numero}.pdf`);
 }
