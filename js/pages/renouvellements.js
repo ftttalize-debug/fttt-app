@@ -4,6 +4,8 @@ import { api } from '../data.js';
 import { aujourdhuiISO, fmtDate, nomComplet, norm, msgErreur, TYPES_LICENCE } from '../lib.js';
 import { Pastille, Champ, toast } from '../ui.js';
 
+const CERTS = { competition: 'Compétition', loisir: 'Loisir', evenementiel: 'Événementiel' };
+
 const TYPES = ['competition', 'loisir', 'dirigeant'];
 
 function plus3Ans(iso) {
@@ -43,7 +45,8 @@ export function PageRenouvellements({ ctx }) {
         const prec = l.historique.find((h) => h.saison_id !== saisonId) || null;
         const c = choix[l.id] || {};
         const type = c.type || prec?.type || 'competition';
-        return { l, prec, type, valable: certificatReutilisable(prec, l.age, type), coche: !!c.coche, questionnaire: !!c.questionnaire };
+        const certType = c.certType || (type === 'competition' ? 'competition' : 'loisir');
+        return { l, prec, type, certType, certDate: c.certDate || '', valable: certificatReutilisable(prec, l.age, type), coche: !!c.coche, questionnaire: !!c.questionnaire };
       })
       .sort((a, b) => a.l.nom.localeCompare(b.l.nom, 'fr'));
   }, [ctx.licencies, clubId, saisonId, q, choix]);
@@ -66,13 +69,16 @@ export function PageRenouvellements({ ctx }) {
   async function valider() {
     setOccupe(true);
     try {
+      const futur = cochees.find((x) => !x.valable && x.certDate && x.certDate > aujourdhuiISO());
+      if (futur) { toast(`La date du certificat de ${nomComplet(futur.l)} est dans le futur.`, 'erreur'); setOccupe(false); return; }
       const items = cochees.map((x) => {
         const reuse = !!x.valable;
+        const saisi = !reuse && !!x.certDate;
         return {
           licencie_id: x.l.id, club_id: clubId, type: x.type,
-          cert_type: reuse ? x.prec.certificat_type : null,
-          cert_date: reuse ? x.prec.certificat_date : null,
-          cert_fourni: reuse,
+          cert_type: reuse ? x.prec.certificat_type : saisi ? x.certType : null,
+          cert_date: reuse ? x.prec.certificat_date : saisi ? x.certDate : null,
+          cert_fourni: reuse || saisi,
           questionnaire: x.questionnaire,
           photo: !!x.prec?.photo_fournie
         };
@@ -110,7 +116,7 @@ export function PageRenouvellements({ ctx }) {
 
     ${clubId && html`<section class="carte" aria-label="Licenciés du club">
       <h2>Personnes à renouveler</h2>
-      <p class="aide">Seules les personnes du club sans licence active pour ${saison?.libelle} sont listées. Le certificat est repris s'il date de moins de 3 ans (moins de 50 ans, type adapté) ; sinon un nouveau certificat est à fournir. Coche « Questionnaire » quand le formulaire de santé est reçu.</p>
+      <p class="aide">Seules les personnes du club sans licence active pour ${saison?.libelle} sont listées. Le certificat est repris s'il date de moins de 3 ans (moins de 50 ans, type adapté) ; sinon tu peux saisir la date du nouveau certificat (facultatif : laissé vide, il reste « à fournir »). Coche « Questionnaire » quand le formulaire de santé est reçu.</p>
       <input type="search" placeholder="Rechercher un nom" value=${q} onInput=${(e) => setQ(e.target.value)} aria-label="Rechercher" />
       <div class="actions">
         <button class="btn btn-secondaire" type="button" onClick=${() => setChoix((x) => { const n = { ...x }; lignes.forEach((r) => { n[r.l.id] = { ...(n[r.l.id] || {}), coche: true }; }); return n; })}>Tout cocher</button>
@@ -126,6 +132,12 @@ export function PageRenouvellements({ ctx }) {
             ${TYPES.map((t) => html`<option key=${t} value=${t}>${TYPES_LICENCE[t]}</option>`)}
           </select>
           ${x.valable ? html`<${Pastille} genre="actif">Certificat valable jusqu'au ${fmtDate(x.valable)}<//>` : html`<${Pastille} genre="alerte">Nouveau certificat à fournir<//>`}
+          ${!x.valable && html`<div style="display:flex;gap:8px;flex-wrap:wrap;width:100%">
+            <select aria-label=${'Type du nouveau certificat de ' + nomComplet(x.l)} value=${x.certType} onChange=${(e) => maj(x.l.id, { certType: e.target.value })}>
+              ${Object.entries(CERTS).map(([k, t]) => html`<option key=${k} value=${k}>${t}</option>`)}
+            </select>
+            <input type="date" aria-label=${'Date du nouveau certificat de ' + nomComplet(x.l)} max=${aujourdhuiISO()} value=${x.certDate} onInput=${(e) => maj(x.l.id, { certDate: e.target.value })} />
+          </div>`}
           <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" checked=${x.questionnaire} onChange=${(e) => maj(x.l.id, { questionnaire: e.target.checked })} /> Questionnaire</label>
         </li>`)}
       </ul>`}
