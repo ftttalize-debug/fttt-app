@@ -13,6 +13,8 @@ import { PageCompetitions, PageCompetition } from './pages/competitions.js';
 import { PageFactures } from './pages/factures.js';
 import { PagePublique } from './pages/public.js';
 import { PagePoints } from './pages/points.js';
+import { PageComptes } from './pages/comptes.js';
+import { api } from './data.js';
 
 function useRoute() {
   const [route, setRoute] = useState(lireRoute());
@@ -54,6 +56,7 @@ function Cadre({ ctx, route, children }) {
           ${gestion && lienNav('factures', ['factures'], 'Factures', 'factures')}
           ${lienNav('classement', ['classement'], 'Classement', 'classement')}
           ${ctx.estCadre && lienNav('points', ['points'], 'Points', 'journal')}
+          ${ctx.estCadre && lienNav('comptes', ['comptes'], 'Comptes', 'profil')}
         </nav>
         <div class="compte">
           <div class="compte-role">${libelleRole(ctx)}</div>
@@ -89,6 +92,7 @@ function Pages({ ctx, route }) {
   if (p === 'clubs' && gestion) return id ? html`<${PageClub} ctx=${ctx} id=${id} />` : html`<${PageClubs} ctx=${ctx} />`;
   if (p === 'competitions') return id ? html`<${PageCompetition} ctx=${ctx} id=${id} />` : html`<${PageCompetitions} ctx=${ctx} route=${route} />`;
   if (p === 'classement' || p === 'resultats') return html`<${PagePublique} route=${route} connecte=${true} />`;
+  if (p === 'comptes' && ctx.estCadre) return html`<${PageComptes} ctx=${ctx} />`;
   if (p === 'points' && ctx.estCadre) return html`<${PagePoints} ctx=${ctx} />`;
   if (p === 'factures' && gestion) return html`<${PageFactures} ctx=${ctx} route=${route} />`;
   return html`<div class="page"><p class="vide">Page introuvable. <a href=${lien([])}>Retour à l'accueil</a></p></div>`;
@@ -99,6 +103,7 @@ function App() {
   const [recuperation, setRecuperation] = useState(false);
   const [data, setData] = useState(null);
   const [erreur, setErreur] = useState('');
+  const [rattachement, setRattachement] = useState({ essai: false, raison: '' });
   const route = useRoute();
 
   useEffect(() => {
@@ -116,7 +121,21 @@ function App() {
     try { setErreur(''); setData(await chargerTout()); }
     catch (e) { setErreur(e?.message || 'Erreur de chargement.'); }
   }, []);
-  useEffect(() => { if (uid) charger(); }, [uid]);
+  useEffect(() => { if (uid) charger(); else setRattachement({ essai: false, raison: '' }); }, [uid]);
+  const rattacher = useCallback(async () => {
+    try {
+      const r = await api.lierMonCompte();
+      if (r?.lie) await charger();
+      setRattachement({ essai: true, raison: r?.lie ? '' : (r?.raison || '') });
+    } catch (e) { setRattachement({ essai: true, raison: 'erreur' }); }
+  }, [charger]);
+
+  useEffect(() => {
+    if (data && uid && !data.licencies.some((l) => l.user_id === uid) && !rattachement.essai) {
+      setRattachement({ essai: true, raison: 'encours' });
+      rattacher();
+    }
+  }, [data, uid, rattachement.essai]);
 
   if (session === undefined) return html`<${Chargement} />`;
   if (!session) {
@@ -136,7 +155,16 @@ function App() {
   const ctx = construireContexte(data, session);
   ctx.recharger = charger;
   if (!ctx.moi) {
-    return html`<${Ecran} titre="Compte non rattaché" texte="Ton compte n'est pas encore relié à une fiche de licencié. Contacte la fédération pour qu'elle le relie." bouton=${deconnexion} />`;
+    if (rattachement.raison === 'encours') return html`<${Chargement} texte="Rattachement de ton compte…" />`;
+    const textes = {
+      email_non_confirme: 'Ton adresse e-mail n\'est pas encore confirmée. Clique sur le lien reçu par e-mail, puis réessaie.',
+      ambigu: 'Plusieurs fiches portent ton adresse e-mail. Contacte la fédération pour qu\'elle corrige cela.',
+      erreur: 'Le rattachement a échoué. Réessaie dans un instant.'
+    };
+    const texte = textes[rattachement.raison]
+      || 'Aucune fiche de licencié majeur ne porte cette adresse e-mail. Vérifie que la fédération ou ton club a bien enregistré cette adresse sur ta fiche.';
+    return html`<${Ecran} titre="Compte non rattaché" texte=${texte}
+      bouton=${html`<div class="actions"><button class="btn btn-primaire" type="button" onClick=${() => { setRattachement({ essai: false, raison: '' }); }}>Réessayer</button>${deconnexion}</div>`} />`;
   }
   return html`<${Cadre} ctx=${ctx} route=${route}><${Pages} ctx=${ctx} route=${route} /><//>`;
 }

@@ -8,6 +8,7 @@ import {
 } from '../lib.js';
 import { Icone, Pastille, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
 import { HistoriqueMatchs } from './matchs.js';
+import { etatCompte } from './comptes.js';
 
 const CERT_PAR_DEFAUT = { competition: 'competition', loisir: 'loisir', evenementielle: 'evenementiel', dirigeant: '' };
 const STATUT_LICENCE = { active: 'Active', expiree: 'Expirée', annulee: 'Annulée' };
@@ -384,6 +385,12 @@ export function PageLicencie({ ctx, id }) {
     <${CarteLicence} ctx=${ctx} l=${l} />
     <${Historique} ctx=${ctx} l=${l} />
     <${HistoriqueMatchs} ctx=${ctx} l=${l} />
+    ${ctx.estCadre && html`<section class="carte" aria-label="Compte et accès">
+      <h2>Compte et accès</h2>
+      <p><${Pastille} genre=${etatCompte(l).genre}>${etatCompte(l).texte}<//>
+        ${ctx.roles.filter((r) => r.licencie_id === l.id).map((r) => html` <${Pastille}>${r.role === 'cadre_federal' ? 'Cadre fédéral' : r.role === 'responsable_club' ? 'Responsable · ' + (ctx.clubParId.get(r.club_id)?.nom || '') : 'Juge-arbitre'}<//>`)}</p>
+      <p><a href=${lien(['comptes'])}>Gérer les comptes et les accès</a></p>
+    </section>`}
   </div>`;
 }
 

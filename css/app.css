@@ -271,3 +271,7 @@ dialog.modal::backdrop { background: rgba(75, 42, 31, .45); }
 .rang { font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 22px; color: var(--indigo); text-align: center; }
 a.puce { display: inline-flex; align-items: center; text-decoration: none; }
 .page-corps { display: flex; flex-direction: column; gap: 16px; }
+
+/* Comptes et accès */
+.carte > .aide + .grille { margin-top: 14px; }
+.carte > .puces + input[type="search"] { margin-top: 12px; margin-bottom: 8px; }

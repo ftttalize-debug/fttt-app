@@ -18,9 +18,10 @@ function Cadre({ titre, children }) {
 }
 
 export function PageConnexion() {
-  const [mode, setMode] = useState('connexion'); // 'connexion' ou 'oubli'
+  const [mode, setMode] = useState('connexion'); // 'connexion', 'oubli' ou 'creation'
   const [email, setEmail] = useState('');
   const [mdp, setMdp] = useState('');
+  const [mdp2, setMdp2] = useState('');
   const [erreur, setErreur] = useState('');
   const [info, setInfo] = useState('');
   const [occupe, setOccupe] = useState(false);
@@ -34,6 +35,16 @@ export function PageConnexion() {
       if (mode === 'connexion') {
         const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: mdp });
         if (error) throw error;
+      } else if (mode === 'creation') {
+        if (mdp.length < 10) throw new Error('Le mot de passe doit contenir au moins 10 caractères.');
+        if (mdp !== mdp2) throw new Error('Les deux mots de passe ne sont pas identiques.');
+        const { error } = await sb.auth.signUp({
+          email: email.trim(), password: mdp,
+          options: { emailRedirectTo: location.origin + location.pathname }
+        });
+        if (error) throw error;
+        setInfo('Compte en cours de création. Ouvre l\'e-mail que nous venons de t\'envoyer et clique sur le lien de confirmation, puis connecte-toi. Utilise l\'adresse e-mail inscrite sur ta fiche de licencié.');
+        setMdp(''); setMdp2('');
       } else {
         const { error } = await sb.auth.resetPasswordForEmail(email.trim(), {
           redirectTo: location.origin + location.pathname
@@ -48,25 +59,31 @@ export function PageConnexion() {
     }
   }
 
-  return html`<${Cadre} titre=${mode === 'connexion' ? 'Connexion' : 'Mot de passe oublié'}>
+  return html`<${Cadre} titre=${mode === 'connexion' ? 'Connexion' : mode === 'creation' ? 'Créer mon compte' : 'Mot de passe oublié'}>
     <form class="grille" onSubmit=${envoyer} noValidate>
       <${Champ} id="c-email" libelle="Adresse e-mail">
         <input id="c-email" type="email" autocomplete="username" required value=${email}
           onInput=${(e) => setEmail(e.target.value)} />
       <//>
-      ${mode === 'connexion' && html`<${Champ} id="c-mdp" libelle="Mot de passe">
-        <input id="c-mdp" type="password" autocomplete="current-password" required value=${mdp}
+      ${mode !== 'oubli' && html`<${Champ} id="c-mdp" libelle="Mot de passe" aide=${mode === 'creation' ? '10 caractères minimum.' : undefined}>
+        <input id="c-mdp" type="password" autocomplete=${mode === 'creation' ? 'new-password' : 'current-password'} required value=${mdp}
           onInput=${(e) => setMdp(e.target.value)} />
+      <//>`}
+      ${mode === 'creation' && html`<${Champ} id="c-mdp2" libelle="Confirmer le mot de passe">
+        <input id="c-mdp2" type="password" autocomplete="new-password" required value=${mdp2}
+          onInput=${(e) => setMdp2(e.target.value)} />
       <//>`}
       ${erreur && html`<p class="erreur" role="alert">${erreur}</p>`}
       ${info && html`<p class="avis" role="status">${info}</p>`}
-      <button class="btn btn-primaire btn-plein" type="submit" disabled=${occupe || !email || (mode === 'connexion' && !mdp)}>
-        ${occupe ? 'Patiente…' : mode === 'connexion' ? 'Se connecter' : 'Envoyer le lien'}
+      <button class="btn btn-primaire btn-plein" type="submit" disabled=${occupe || !email || (mode !== 'oubli' && !mdp) || (mode === 'creation' && !mdp2)}>
+        ${occupe ? 'Patiente…' : mode === 'connexion' ? 'Se connecter' : mode === 'creation' ? 'Créer mon compte' : 'Envoyer le lien'}
       </button>
       <button class="btn btn-lien" type="button"
         onClick=${() => { setMode(mode === 'connexion' ? 'oubli' : 'connexion'); setErreur(''); setInfo(''); }}>
         ${mode === 'connexion' ? 'Mot de passe oublié ?' : 'Retour à la connexion'}
       </button>
+      ${mode === 'connexion' && html`<button class="btn btn-lien" type="button"
+        onClick=${() => { setMode('creation'); setErreur(''); setInfo(''); }}>Créer mon compte</button>`}
       <a class="btn btn-lien" href="#/classement">Voir le classement public</a>
     </form>
   <//>`;
