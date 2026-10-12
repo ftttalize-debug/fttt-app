@@ -28,7 +28,7 @@ async function toutLire(table, ordre) {
 }
 
 export async function chargerTout() {
-  const [saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures] = await Promise.all([
+  const [saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges] = await Promise.all([
     toutLire('saisons', 'date_debut'),
     toutLire('clubs', 'nom'),
     toutLire('licencies', 'nom'),
@@ -37,14 +37,18 @@ export async function chargerTout() {
     toutLire('competitions', 'date_debut'),
     toutLire('inscriptions', 'created_at'),
     toutLire('inscription_participants', null),
-    toutLire('factures', 'created_at')
+    toutLire('factures', 'created_at'),
+    toutLire('matchs', 'created_at'),
+    toutLire('participants_match', null),
+    toutLire('manches', null),
+    toutLire('competition_juges', null)
   ]);
   let parametres = {};
   try {
     const { data, error } = await sb.from('parametres').select('*');
     if (!error && data) parametres = Object.fromEntries(data.map((r) => [r.cle, r.valeur]));
   } catch { /* table absente ou non autorisée : valeurs par défaut */ }
-  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, parametres };
+  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, parametres };
 }
 
 /** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */
@@ -62,6 +66,23 @@ async function appeler(nom, args) {
 }
 
 export const api = {
+  saisirMatch: (a) =>
+    appeler('saisir_match', {
+      p_competition: a.competition, p_tour: a.tour || '', p_type: a.type, p_sets_gagnants: a.setsGagnants,
+      p_cote_a: a.coteA, p_cote_b: a.coteB, p_manches: a.manches, p_match: a.match || null
+    }),
+  supprimerMatch: (id) => appeler('supprimer_match', { p_match: id }),
+  rejeterMatch: (id) => appeler('rejeter_match', { p_match: id }),
+  validerMatchs: (competition) => appeler('valider_matchs', { p_competition: competition }),
+  invaliderMatch: (id) => appeler('invalider_match', { p_match: id }),
+  ajouterJuge: async (competition, licencie) => {
+    const { error } = await sb.from('competition_juges').insert({ competition_id: competition, licencie_id: licencie });
+    if (error) throw error;
+  },
+  retirerJuge: async (id) => {
+    const { error } = await sb.from('competition_juges').delete().eq('id', id);
+    if (error) throw error;
+  },
   genererFactures: (competition) => appeler('generer_factures', { p_competition: competition }),
   changerStatutFacture: (facture, statut) => appeler('changer_statut_facture', { p_facture: facture, p_statut: statut }),
   enregistrerInscription: (competition, club, joueurs, inscription = null) =>

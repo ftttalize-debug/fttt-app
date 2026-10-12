@@ -3,7 +3,7 @@ import { FEDERATION } from './config.js';
 import { categorie, ageExact, saisonCourante, aujourdhuiISO } from './lib.js';
 
 export function construireContexte(data, session) {
-  const { saisons, clubs, licencies, licences, roles, competitions = [], inscriptions = [], participants = [], factures = [], parametres = {} } = data;
+  const { saisons, clubs, licencies, licences, roles, competitions = [], inscriptions = [], participants = [], factures = [], matchs = [], pmatchs = [], manches = [], juges = [], parametres = {} } = data;
   const saison = saisonCourante(saisons);
   const clubParId = new Map(clubs.map((c) => [c.id, c]));
   const saisonParId = new Map(saisons.map((s) => [s.id, s]));
@@ -53,6 +53,17 @@ export function construireContexte(data, session) {
     factures: factures.map((f) => {
       const insc = inscriptions.find((i) => i.id === f.inscription_id) || null;
       return { ...f, competition_id: insc?.competition_id || null, clubNom: clubParId.get(f.club_id)?.nom || '—' };
+    }),
+    juges,
+    matchs: matchs.map((m) => {
+      const pm = pmatchs.filter((p) => p.match_id === m.id);
+      const A = pm.filter((p) => p.cote === 'A');
+      const B = pm.filter((p) => p.cote === 'B');
+      return {
+        ...m, A, B,
+        setsA: A[0]?.sets_gagnes ?? 0, setsB: B[0]?.sets_gagnes ?? 0,
+        manches: manches.filter((x) => x.match_id === m.id).sort((a, b) => a.numero - b.numero)
+      };
     }),
     federation: { ...FEDERATION, ...(parametres.federation || {}) },
     competitionParId: new Map(competitions.map((c) => [c.id, c])),
