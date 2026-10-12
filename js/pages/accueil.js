@@ -18,7 +18,7 @@ export function PageAccueil({ ctx }) {
 
   const actifs = licencies.filter((l) => l.statut === 'actif');
   const archives = licencies.filter((l) => l.statut === 'archive');
-  const mineurs = actifs.filter((l) => l.age !== null && l.age < 18);
+  const nbMatchs = (ctx.matchs || []).filter((m) => m.statut !== 'rejete' && ctx.competitionParId.get(m.competition_id)?.saison_id === saison?.id).length;
   const certificats = licencies.filter((l) => l.alerteCertificat);
   const parType = {};
   for (const l of actifs) {
@@ -38,8 +38,8 @@ export function PageAccueil({ ctx }) {
         <div class="stat-valeur">${actifs.length}</div><div class="stat-libelle">Licenciés actifs</div></a>
       <a class="stat" href=${lien(['licencies'], { statut: 'archive' })}>
         <div class="stat-valeur">${archives.length}</div><div class="stat-libelle">Fiches archivées</div></a>
-      <div class="stat">
-        <div class="stat-valeur">${mineurs.length}</div><div class="stat-libelle">Mineurs actifs</div></div>
+      <a class="stat" id="stat-matchs" href=${lien(['competitions'])}>
+        <div class="stat-valeur">${nbMatchs}</div><div class="stat-libelle">Matchs joués cette saison</div></a>
       ${estCadre
         ? html`<a class="stat" href=${lien(['clubs'])}><div class="stat-valeur">${clubsActifs}</div><div class="stat-libelle">Clubs actifs</div></a>`
         : html`<a class="stat" href=${lien(['clubs'])}><div class="stat-valeur">${clubs.length}</div><div class="stat-libelle">Mon club</div></a>`}
