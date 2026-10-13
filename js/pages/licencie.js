@@ -311,7 +311,19 @@ function LectureFiche({ ctx, l, estSoi }) {
       ${(estSoi || ctx.estCadre) && html`<div><dt>Para-tennis de table</dt><dd>${l.handicap ? 'Oui' : 'Non'}</dd></div>`}
       ${rep && html`<div><dt>Représentant légal</dt><dd>${nomComplet(rep)}</dd></div>`}
     </dl>
+    ${(ctx.estCadre || estGestionnaireClub(ctx, l)) && l.numero_licence && html`<button class="btn btn-secondaire" type="button" id="btn-msg-numero" onClick=${() => copierMessageNumero(l)}>Copier le message avec le n° de licence</button>`}
   </section>`;
+}
+
+function estGestionnaireClub(ctx, l) { return !!ctx.estResponsable && !!l.club_id; }
+
+async function copierMessageNumero(l) {
+  const adresse = location.origin + location.pathname + '#/sinscrire';
+  const texte = `Bonjour ${l.prenom}, ton numéro de licence FTTT est ${l.numero_licence}. `
+    + `Pour t'inscrire toi-même aux compétitions, va sur ${adresse} et saisis ce numéro et ta date de naissance. `
+    + `Garde ce numéro : il reste le même d'une saison à l'autre.`;
+  try { await navigator.clipboard.writeText(texte); toast('Message copié : colle-le dans WhatsApp ou un SMS.'); }
+  catch (e) { window.prompt('Copie ce message :', texte); }
 }
 
 function ContactSeul({ ctx, l }) {
