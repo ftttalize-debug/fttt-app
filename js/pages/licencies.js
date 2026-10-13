@@ -1,9 +1,10 @@
 // Liste des licenciés : recherche, filtres, export CSV.
 import { html, useState, useMemo } from '../preact.js';
-import { lien, naviguer, norm, fmtPts, fmtDate, aujourdhuiISO, telechargerCsv, CATEGORIES, TYPES_LICENCE } from '../lib.js';
+import { lien, naviguer, estMineur, norm, fmtPts, fmtDate, aujourdhuiISO, telechargerCsv, CATEGORIES, TYPES_LICENCE } from '../lib.js';
 import { Icone, Pastille } from '../ui.js';
 
 const PAGE = 40;
+const repManquant = (l) => l.statut === 'actif' && estMineur(l.date_naissance) && !l.representant_legal_id;
 
 export function PageLicencies({ ctx, route }) {
   const { licencies, clubs, saison, estCadre } = ctx;
@@ -29,6 +30,7 @@ export function PageLicencies({ ctx, route }) {
         return l.courante?.type === q.type;
       })
       .filter((l) => (q.alerte === 'certificat' ? l.alerteCertificat : true))
+      .filter((l) => (q.alerte === 'representant' ? repManquant(l) : true))
       .filter((l) => {
         if (!mots.length) return true;
         const cle = norm(`${l.prenom} ${l.nom} ${l.clubNom}`);
@@ -87,6 +89,7 @@ export function PageLicencies({ ctx, route }) {
         <select aria-label="Pièces du dossier" value=${q.alerte || ''} onChange=${(e) => change('alerte', e.target.value)}>
           <option value="">Dossiers : tous</option>
           <option value="certificat">Certificat manquant</option>
+          <option value="representant">Représentant légal à renseigner</option>
         </select>
       </div>
     </section>
@@ -106,6 +109,7 @@ export function PageLicencies({ ctx, route }) {
                   <${Pastille} genre=${l.statut === 'actif' ? 'actif' : 'archive'}>${l.statut === 'actif' ? 'Actif' : 'Archivé'}<//>
                   ${l.courante && html`<${Pastille}>${TYPES_LICENCE[l.courante.type]}<//>`}
                   ${l.alerteCertificat && html`<${Pastille} genre="alerte">Certificat manquant<//>`}
+                  ${repManquant(l) && html`<${Pastille} genre="alerte">Représentant à renseigner<//>`}
                 </span>
                 <span class="ligne-pts">${fmtPts(l.points)} <small>pts</small></span>
               </a>

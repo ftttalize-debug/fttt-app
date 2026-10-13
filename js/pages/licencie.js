@@ -167,7 +167,7 @@ function DialogueLicence({ ctx, l, onFermer }) {
 
   return html`<${Dialogue} titre=${`Licence ${ctx.saison.libelle}`} onFermer=${onFermer}>
     <form class="grille" onSubmit=${valider} noValidate>
-      ${mineurSansRep && html`<p class="avis avis-alerte">Ce licencié est mineur : enregistre d'abord son représentant légal sur la fiche.</p>`}
+      ${mineurSansRep && html`<p class="avis avis-alerte">Ce licencié est mineur : le représentant légal est à renseigner sur la fiche (obligatoire avant toute réactivation).</p>`}
       ${remonte && html`<p class="avis">Ses points (${fmtPts(l.points)}) seront remontés à 500, comme pour toute réactivation.</p>`}
       <${Champ} id="d-club" libelle="Club">
         <select id="d-club" value=${club} onChange=${(e) => setClub(e.target.value)}>
@@ -266,7 +266,7 @@ function FormulaireFiche({ ctx, l }) {
 
   async function enregistrer(e) {
     e.preventDefault();
-    const err = validerIdentite(f, { exigerRepresentant: l.statut === 'actif' });
+    const err = validerIdentite(f, { exigerRepresentant: l.statut === 'actif' && !!l.representant_legal_id });
     setErreurs(err);
     if (Object.keys(err).length) return toast('Corrige les champs signalés.', 'erreur');
     const patch = {};

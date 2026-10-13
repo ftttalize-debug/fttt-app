@@ -21,6 +21,7 @@ export function PageAccueil({ ctx }) {
   const archives = licencies.filter((l) => l.statut === 'archive');
   const auj = aujourdhuiISO();
   const nbCompetitions = (ctx.competitions || []).filter((c) => c.statut !== 'brouillon' && c.saison_id === saison?.id && c.date_fin >= auj).length;
+  const nbRep = licencies.filter((l) => l.statut === 'actif' && l.age !== null && l.age < 18 && !l.representant_legal_id).length;
   const nbAlertes = licencies.filter((l) => etatCertificat(l)).length;
   const parType = {};
   for (const l of actifs) {
@@ -60,6 +61,8 @@ export function PageAccueil({ ctx }) {
     <div class="stats">
       <a class=${'stat' + (nbAlertes ? ' stat-alerte' : '')} id="stat-certificats" href=${lien(['certificats'])}>
         <div class="stat-valeur">${nbAlertes}</div><div class="stat-libelle">Certificats à suivre</div></a>
+      ${nbRep > 0 && html`<a class="stat stat-alerte" id="stat-representants" href=${lien(['licencies'], { alerte: 'representant' })}>
+        <div class="stat-valeur">${nbRep}</div><div class="stat-libelle">Représentants à renseigner</div></a>`}
     </div>
   </div>`;
 }
