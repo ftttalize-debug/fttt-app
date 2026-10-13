@@ -103,7 +103,7 @@ export function PageLicencies({ ctx, route }) {
           <ul class="liste">
             ${visibles.map((l) => html`<li key=${l.id}>
               <a class=${'ligne' + (l.statut === 'archive' ? ' ligne-archive' : '')} href=${lien(['licencies', l.id])}>
-                <span class="ligne-nom"><strong>${l.prenom} ${l.nom}</strong><small>${l.clubNom}</small></span>
+                <span class="ligne-nom"><strong>${l.prenom} ${l.nom}</strong><small>${l.clubNom}${l.numero_licence ? " · " + l.numero_licence : ""}</small></span>
                 <span><${Pastille} genre="categorie">${l.categorie}<//></span>
                 <span class="etiquettes">
                   <${Pastille} genre=${l.statut === 'actif' ? 'actif' : 'archive'}>${l.statut === 'actif' ? 'Actif' : 'Archivé'}<//>
