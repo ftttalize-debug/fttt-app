@@ -18,6 +18,7 @@ import { PageJoueur } from './pages/joueur.js';
 import { PagePoints } from './pages/points.js';
 import { PageComptes } from './pages/comptes.js';
 import { PageJournal } from './pages/journal.js';
+import { PageCertificats } from './pages/certificats.js';
 import { PageRenouvellements } from './pages/renouvellements.js';
 import { api } from './data.js';
 
@@ -106,6 +107,7 @@ function Pages({ ctx, route }) {
   if (p === 'connexion') return html`<${PageAccueil} ctx=${ctx} />`;
   if (p === 'renouvellements' && ctx.estCadre) return html`<${PageRenouvellements} ctx=${ctx} />`;
   if (p === 'comptes' && ctx.estCadre) return html`<${PageComptes} ctx=${ctx} />`;
+  if (p === 'certificats' && gestion) return html`<${PageCertificats} ctx=${ctx} />`;
   if (p === 'journal' && ctx.estCadre) return html`<${PageJournal} ctx=${ctx} route=${route} />`;
   if (p === 'points' && ctx.estCadre) return html`<${PagePoints} ctx=${ctx} />`;
   if (p === 'factures' && gestion) return html`<${PageFactures} ctx=${ctx} route=${route} />`;

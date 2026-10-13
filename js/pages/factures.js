@@ -1,7 +1,7 @@
 // Factures : liste, téléchargement PDF et suivi (cadre fédéral) ; consultation pour les responsables de club.
 import { html, useState } from '../preact.js';
 import { api } from '../data.js';
-import { lien, naviguer, fmtDate, msgErreur } from '../lib.js';
+import { lien, naviguer, fmtDate, msgErreur, aujourdhuiISO, telechargerCsv } from '../lib.js';
 import { Icone, Pastille, toast } from '../ui.js';
 import { fmtXpf } from './competitions.js';
 import { telechargerFacture } from '../facture-pdf.js';
@@ -49,9 +49,15 @@ export function PageFactures({ ctx, route }) {
   const aRegler = liste.filter((f) => f.statut === 'generee' || f.statut === 'envoyee').reduce((n, f) => n + f.montant_xpf, 0);
   const change = (cle, v) => naviguer(['factures'], { ...q, [cle]: v }, true);
   const comp = q.competition ? ctx.competitionParId.get(q.competition) : null;
+  function exporter() {
+    telechargerCsv(`factures-${aujourdhuiISO()}.csv`,
+      ['Numéro', 'Date', 'Club', 'Compétition', 'Montant (XPF)', 'Statut'],
+      liste.map((f) => [f.numero, fmtDate(String(f.created_at).slice(0, 10)), f.clubNom, ctx.competitionParId.get(f.competition_id)?.nom || '', f.montant_xpf, STATUTS_FACTURE[f.statut]]));
+  }
   return html`<div class="page">
     <div class="page-tete"><div><h1>Factures</h1>
-      <p>${comp ? comp.nom + ' · ' : ''}${liste.length} facture${liste.length > 1 ? 's' : ''} · ${fmtXpf(total)} · ${fmtXpf(aRegler)} à régler</p></div></div>
+      <p>${comp ? comp.nom + ' · ' : ''}${liste.length} facture${liste.length > 1 ? 's' : ''} · ${fmtXpf(total)} · ${fmtXpf(aRegler)} à régler</p></div>
+      <div class="page-actions"><button class="btn btn-secondaire" type="button" id="exp-factures" disabled=${!liste.length} onClick=${exporter}><${Icone} nom="telecharger" taille=${20} /> Exporter (CSV)</button></div></div>
     <section class="carte filtres" aria-label="Filtres">
       <div class="puces" role="group" aria-label="Statut">
         ${[['toutes', 'Toutes'], ['generee', 'À envoyer'], ['envoyee', 'Envoyées'], ['reglee', 'Réglées'], ['annulee', 'Annulées']].map(([v, l]) => html`

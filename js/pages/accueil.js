@@ -2,6 +2,7 @@
 import { html } from '../preact.js';
 import { lien, TYPES_LICENCE, nomComplet } from '../lib.js';
 import { Pastille } from '../ui.js';
+import { etatCertificat } from './certificats.js';
 
 export function PageAccueil({ ctx }) {
   const { saison, licencies, moi, estCadre, estResponsable, clubs } = ctx;
@@ -19,7 +20,7 @@ export function PageAccueil({ ctx }) {
   const actifs = licencies.filter((l) => l.statut === 'actif');
   const archives = licencies.filter((l) => l.statut === 'archive');
   const nbMatchs = (ctx.matchs || []).filter((m) => m.statut !== 'rejete' && ctx.competitionParId.get(m.competition_id)?.saison_id === saison?.id).length;
-  const certificats = licencies.filter((l) => l.alerteCertificat);
+  const nbAlertes = licencies.filter((l) => etatCertificat(l)).length;
   const parType = {};
   for (const l of actifs) {
     const t = l.courante?.type;
@@ -56,8 +57,8 @@ export function PageAccueil({ ctx }) {
     </div>
 
     <div class="stats">
-      <a class=${'stat' + (certificats.length ? ' stat-alerte' : '')} href=${lien(['licencies'], { alerte: 'certificat' })}>
-        <div class="stat-valeur">${certificats.length}</div><div class="stat-libelle">Certificats médicaux à fournir</div></a>
+      <a class=${'stat' + (nbAlertes ? ' stat-alerte' : '')} id="stat-certificats" href=${lien(['certificats'])}>
+        <div class="stat-valeur">${nbAlertes}</div><div class="stat-libelle">Certificats à suivre (manquants, expirés, bientôt)</div></a>
     </div>
   </div>`;
 }

@@ -1,7 +1,7 @@
 // Inscriptions des joueurs à une compétition (responsable de club ou cadre fédéral).
 import { html, useState, useMemo } from '../preact.js';
 import { api } from '../data.js';
-import { lien, norm, fmtPts, fmtDate, nomComplet, aujourdhuiISO, msgErreur } from '../lib.js';
+import { lien, norm, fmtPts, fmtDate, nomComplet, aujourdhuiISO, msgErreur, telechargerCsv } from '../lib.js';
 import { Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { fmtXpf } from './competitions.js';
 
@@ -120,6 +120,18 @@ export function CarteInscriptions({ ctx, c }) {
   const clubsPossibles = c.type === 'simple' ? gere.filter((k) => !toutes.some((i) => i.club_id === k.id)) : gere;
   const nbJoueurs = toutes.reduce((n, i) => n + i.joueurs.length, 0);
 
+  function exporter() {
+    const lignes = [];
+    visibles.filter((i) => ctx.estCadre || ctx.clubsResponsable.includes(i.club_id)).forEach((i) => {
+      i.joueurs.forEach((j, k) => {
+        const l = ctx.licencieParId.get(j.licencie_id);
+        lignes.push([c.nom, ctx.clubParId.get(i.club_id)?.nom || '', TYPE_INSC[i.type], k + 1, l?.nom || '', l?.prenom || '', l?.categorie || '', l ? fmtPts(l.points) : '', c.montant_xpf]);
+      });
+    });
+    telechargerCsv(`inscriptions-${norm(c.nom).replace(/[^a-z0-9]+/g, '-')}-${aujourdhuiISO()}.csv`,
+      ['Compétition', 'Club', 'Type', 'Rang', 'Nom', 'Prénom', 'Catégorie', 'Points actuels', 'Montant par participant (XPF)'], lignes);
+  }
+
   async function annuler() {
     setOccupe(true);
     try {
@@ -136,6 +148,7 @@ export function CarteInscriptions({ ctx, c }) {
 
   return html`<section class="carte" aria-label="Inscriptions">
     <h2>Inscriptions</h2>
+    ${visibles.length > 0 && html`<p><button class="btn btn-secondaire" type="button" id="exp-inscriptions" onClick=${exporter}><${Icone} nom="telecharger" taille=${18} /> Exporter (CSV)</button></p>`}
     ${ctx.estCadre && html`<p class="aide">${toutes.length} inscription${toutes.length > 1 ? 's' : ''} · ${nbJoueurs} joueur${nbJoueurs > 1 ? 's' : ''} · ${fmtXpf(nbJoueurs * c.montant_xpf)} au total</p>`}
     ${gere.length > 0 && !agir && c.statut === 'ouverte' && html`<p class="avis">La date limite est passée (${fmtDate(c.date_limite_inscription)}). Contacte la fédération pour toute modification.</p>`}
     ${gere.length > 0 && c.statut !== 'ouverte' && !ctx.estCadre && html`<p class="avis">Les inscriptions sont closes.</p>`}
