@@ -17,28 +17,35 @@ export function PageClubs({ ctx }) {
     const membres = licencies.filter((l) => l.club_id === c.id);
     return { club: c, actifs: membres.filter((l) => l.statut === 'actif').length, total: membres.length, resp: responsablesDe(ctx, c.id) };
   }), [clubs, licencies, ctx.roles]);
+  const trier = (t) => [...t].sort((x, y) => x.club.nom.localeCompare(y.club.nom, 'fr'));
+  const affilies = trier(lignes.filter((x) => x.actifs > 0));
+  const nonAffilies = trier(lignes.filter((x) => x.actifs === 0));
 
   return html`<div class="page">
     <div class="page-tete">
       <div><h1>Clubs</h1><p>${clubs.length} club${clubs.length > 1 ? 's' : ''} · ${lignes.filter((x) => x.actifs > 0).length} affilié${lignes.filter((x) => x.actifs > 0).length > 1 ? 's' : ''} pour la saison</p></div>
       ${estCadre && html`<div class="page-actions"><a class="btn btn-primaire" href=${lien(['clubs', 'nouveau'])}><${Icone} nom="plus" taille=${20} /> Nouveau club</a></div>`}
     </div>
-    ${clubs.length === 0 ? html`<p class="vide">Aucun club.</p>` : html`<ul class="liste">
-      ${lignes.map(({ club, actifs, total, resp }) => html`<li key=${club.id}>
+    ${clubs.length === 0 ? html`<p class="vide">Aucun club.</p>` : html`<div>
+      ${[['Clubs affiliés', affilies], ['Clubs non affiliés', nonAffilies]].map(([titre, liste]) => liste.length > 0 && html`<section key=${titre}>
+        <h2 class="groupe-titre">${titre} (${liste.length})</h2>
+        <ul class="liste">
+      ${liste.map(({ club, actifs, total, resp }) => html`<li key=${club.id}>
         <a class=${'ligne' + (club.actif ? '' : ' ligne-archive')} style="display:flex" href=${lien(['clubs', club.id])}>
           <span class="ligne-nom">
             <strong>${club.nom}${club.sigle ? ` (${club.sigle})` : ''}</strong>
             <small>${resp.length ? 'Responsable : ' + resp.map((r) => nomComplet(r.licencie)).join(', ') : 'Aucun responsable désigné'}</small>
           </span>
           <span class="etiquettes">
-            <${Pastille} genre=${actifs > 0 ? 'actif' : 'alerte'}>${actifs > 0 ? 'Affilié' : 'Non affilié'}<//>
             <${Pastille} genre="actif">${actifs} actif${actifs > 1 ? 's' : ''}<//>
             <${Pastille}>${total} fiche${total > 1 ? 's' : ''}<//>
             ${!club.actif && html`<${Pastille} genre="archive">Inactif<//>`}
           </span>
         </a>
       </li>`)}
-    </ul>`}
+        </ul>
+      </section>`)}
+    </div>`}
   </div>`;
 }
 

@@ -321,3 +321,6 @@ a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(-
 .pts-cote { display: block; font-weight: 700; }
 .liste-choix { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .liste-choix .btn { width: 100%; justify-content: flex-start; text-align: left; }
+
+.groupe-titre { margin: 24px 0 8px; font-size: 18px; color: var(--brun-doux); }
+.groupe-titre:first-child { margin-top: 8px; }
