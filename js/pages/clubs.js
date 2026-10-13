@@ -20,7 +20,7 @@ export function PageClubs({ ctx }) {
 
   return html`<div class="page">
     <div class="page-tete">
-      <div><h1>Clubs</h1><p>${clubs.length} club${clubs.length > 1 ? 's' : ''}</p></div>
+      <div><h1>Clubs</h1><p>${clubs.length} club${clubs.length > 1 ? 's' : ''} · ${lignes.filter((x) => x.actifs > 0).length} affilié${lignes.filter((x) => x.actifs > 0).length > 1 ? 's' : ''} pour la saison</p></div>
       ${estCadre && html`<div class="page-actions"><a class="btn btn-primaire" href=${lien(['clubs', 'nouveau'])}><${Icone} nom="plus" taille=${20} /> Nouveau club</a></div>`}
     </div>
     ${clubs.length === 0 ? html`<p class="vide">Aucun club.</p>` : html`<ul class="liste">
@@ -31,6 +31,7 @@ export function PageClubs({ ctx }) {
             <small>${resp.length ? 'Responsable : ' + resp.map((r) => nomComplet(r.licencie)).join(', ') : 'Aucun responsable désigné'}</small>
           </span>
           <span class="etiquettes">
+            <${Pastille} genre=${actifs > 0 ? 'actif' : 'alerte'}>${actifs > 0 ? 'Affilié' : 'Non affilié'}<//>
             <${Pastille} genre="actif">${actifs} actif${actifs > 1 ? 's' : ''}<//>
             <${Pastille}>${total} fiche${total > 1 ? 's' : ''}<//>
             ${!club.actif && html`<${Pastille} genre="archive">Inactif<//>`}
@@ -192,7 +193,7 @@ export function PageClub({ ctx, id }) {
   return html`<div class="page">
     <a class="retour" href=${lien(['clubs'])}><${Icone} nom="retour" taille=${20} /> Clubs</a>
     <div class="page-tete">
-      <div><h1>${club ? club.nom : 'Nouveau club'}</h1>${club && html`<p>${actifs} licencié${actifs > 1 ? 's' : ''} actif${actifs > 1 ? 's' : ''} · ${membres.length} fiche${membres.length > 1 ? 's' : ''} au total</p>`}</div>
+      <div><h1>${club ? club.nom : 'Nouveau club'}</h1>${club && html`<p>${actifs > 0 ? 'Affilié' : 'Non affilié'} pour la saison · ${actifs} licencié${actifs > 1 ? 's' : ''} actif${actifs > 1 ? 's' : ''} · ${membres.length} fiche${membres.length > 1 ? 's' : ''} au total</p>`}</div>
       ${club && html`<div class="page-actions"><a class="btn btn-secondaire" href=${lien(['licencies'], { club: club.id })}>Voir les licenciés</a></div>`}
     </div>
     <${FormulaireClub} ctx=${ctx} club=${club} />

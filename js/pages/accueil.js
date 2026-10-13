@@ -28,7 +28,7 @@ export function PageAccueil({ ctx }) {
     const t = l.courante?.type;
     if (t) parType[t] = (parType[t] || 0) + 1;
   }
-  const clubsActifs = clubs.filter((c) => c.actif).length;
+  const clubsActifs = clubs.filter((c) => licencies.some((l) => l.club_id === c.id && l.statut === 'actif')).length;
 
   return html`<div class="page">
     <div class="page-tete">
@@ -44,7 +44,7 @@ export function PageAccueil({ ctx }) {
       <a class="stat" id="stat-competitions" href=${lien(['competitions'])}>
         <div class="stat-valeur">${nbCompetitions}</div><div class="stat-libelle">Compétitions à venir</div></a>
       ${estCadre
-        ? html`<a class="stat" href=${lien(['clubs'])}><div class="stat-valeur">${clubsActifs}</div><div class="stat-libelle">Clubs actifs</div></a>`
+        ? html`<a class="stat" href=${lien(['clubs'])}><div class="stat-valeur">${clubsActifs}</div><div class="stat-libelle">Clubs affiliés</div></a>`
         : html`<a class="stat" href=${lien(['clubs'])}><div class="stat-valeur">${clubs.length}</div><div class="stat-libelle">Mon club</div></a>`}
     </div>
 
