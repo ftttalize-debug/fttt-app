@@ -8,6 +8,14 @@ import { ListeMatchs, bilanHisto } from './joueur.js';
 
 const libelleMois = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 const PAGE = 50;
+// Filtres « jeunes » cumulatifs, selon la catégorie (âge au 1er janvier) : U11 = poussins + benjamins, etc.
+const MOINS_DE = {
+  U11: ['poussin', 'benjamin'],
+  U13: ['poussin', 'benjamin', 'minime'],
+  U15: ['poussin', 'benjamin', 'minime', 'cadet'],
+  U19: ['poussin', 'benjamin', 'minime', 'cadet', 'junior'],
+};
+const LIBELLE_U = { U11: '11 ans et moins', U13: '13 ans et moins', U15: '15 ans et moins', U19: '19 ans et moins' };
 
 function Classement() {
   const [mois, setMois] = useState([]);
@@ -31,7 +39,7 @@ function Classement() {
   const liste = useMemo(() => {
     const mots = norm(texte).split(/\s+/).filter(Boolean);
     return (lignes || [])
-      .filter((l) => (cat ? norm(l.categorie) === norm(cat) : true))
+      .filter((l) => (!cat ? true : MOINS_DE[cat] ? MOINS_DE[cat].includes(norm(l.categorie)) : norm(l.categorie) === norm(cat)))
       .filter((l) => (sexe ? l.sexe === sexe : true))
       .filter((l) => mots.every((m) => norm(`${l.prenom} ${l.nom} ${l.club || ''}`).includes(m)));
   }, [lignes, cat, sexe, texte]);
@@ -47,7 +55,9 @@ function Classement() {
         <select aria-label="Mois" value=${choix} onChange=${(e) => { setChoix(e.target.value); setNb(PAGE); }}>
           ${mois.map((m) => html`<option key=${m} value=${m}>Classement de ${libelleMois(m)}</option>`)}</select>
         <select aria-label="Catégorie" value=${cat} onChange=${(e) => { setCat(e.target.value); setNb(PAGE); }}>
-          <option value="">Toutes les catégories</option>${CATEGORIES.map((c) => html`<option key=${c} value=${c}>${c}</option>`)}</select>
+          <option value="">Toutes les catégories</option>
+          <optgroup label="Jeunes (cumulatif)">${Object.keys(MOINS_DE).map((u) => html`<option key=${u} value=${u}>${u} (${LIBELLE_U[u]})</option>`)}</optgroup>
+          <optgroup label="Catégories">${CATEGORIES.map((c) => html`<option key=${c} value=${c}>${c}</option>`)}</optgroup></select>
         <select aria-label="Sexe" value=${sexe} onChange=${(e) => { setSexe(e.target.value); setNb(PAGE); }}>
           <option value="">Dames et messieurs</option><option value="F">Dames</option><option value="M">Messieurs</option></select>
       </div>
