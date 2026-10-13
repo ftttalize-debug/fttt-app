@@ -311,11 +311,8 @@ function LectureFiche({ ctx, l, estSoi }) {
       ${(estSoi || ctx.estCadre) && html`<div><dt>Para-tennis de table</dt><dd>${l.handicap ? 'Oui' : 'Non'}</dd></div>`}
       ${rep && html`<div><dt>Représentant légal</dt><dd>${nomComplet(rep)}</dd></div>`}
     </dl>
-    ${(ctx.estCadre || estGestionnaireClub(ctx, l)) && l.numero_licence && html`<button class="btn btn-secondaire" type="button" id="btn-msg-numero" onClick=${() => copierMessageNumero(l)}>Copier le message avec le n° de licence</button>`}
   </section>`;
 }
-
-function estGestionnaireClub(ctx, l) { return !!ctx.estResponsable && !!l.club_id; }
 
 async function copierMessageNumero(l) {
   const adresse = location.origin + location.pathname + '#/sinscrire';
@@ -386,8 +383,10 @@ export function PageLicencie({ ctx, id }) {
           <${Pastille} genre=${l.statut === 'actif' ? 'actif' : 'archive'}>${l.statut === 'actif' ? 'Actif' : 'Archivé'}<//>
           <${Pastille} genre="categorie">${l.categorie}<//>
           <${Pastille}>${l.clubNom}<//>
+          ${l.numero_licence && html`<${Pastille}>N° ${l.numero_licence}<//>`}
           ${l.alerteCertificat && html`<${Pastille} genre="alerte">Certificat manquant<//>`}
         </div>
+        ${(ctx.estCadre || ctx.estResponsable) && l.numero_licence && html`<button class="btn btn-secondaire" type="button" id="btn-msg-numero" style="margin-top:12px" onClick=${() => copierMessageNumero(l)}>Copier le message avec le n° de licence</button>`}
       </div>
       <div class="fiche-pts"><strong>${fmtPts(l.points)}</strong><small>points</small></div>
     </div>
