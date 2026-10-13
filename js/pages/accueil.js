@@ -1,6 +1,6 @@
 // Page d'accueil : chiffres clés de la saison.
 import { html } from '../preact.js';
-import { lien, TYPES_LICENCE, nomComplet } from '../lib.js';
+import { lien, TYPES_LICENCE, nomComplet, aujourdhuiISO } from '../lib.js';
 import { Pastille } from '../ui.js';
 import { etatCertificat } from './certificats.js';
 
@@ -19,7 +19,8 @@ export function PageAccueil({ ctx }) {
 
   const actifs = licencies.filter((l) => l.statut === 'actif');
   const archives = licencies.filter((l) => l.statut === 'archive');
-  const nbMatchs = (ctx.matchs || []).filter((m) => m.statut !== 'rejete' && ctx.competitionParId.get(m.competition_id)?.saison_id === saison?.id).length;
+  const auj = aujourdhuiISO();
+  const nbCompetitions = (ctx.competitions || []).filter((c) => c.statut !== 'brouillon' && c.saison_id === saison?.id && c.date_fin >= auj).length;
   const nbAlertes = licencies.filter((l) => etatCertificat(l)).length;
   const parType = {};
   for (const l of actifs) {
@@ -39,8 +40,8 @@ export function PageAccueil({ ctx }) {
         <div class="stat-valeur">${actifs.length}</div><div class="stat-libelle">Licenciés actifs</div></a>
       <a class="stat" href=${lien(['licencies'], { statut: 'archive' })}>
         <div class="stat-valeur">${archives.length}</div><div class="stat-libelle">Fiches archivées</div></a>
-      <a class="stat" id="stat-matchs" href=${lien(['competitions'])}>
-        <div class="stat-valeur">${nbMatchs}</div><div class="stat-libelle">Matchs joués cette saison</div></a>
+      <a class="stat" id="stat-competitions" href=${lien(['competitions'])}>
+        <div class="stat-valeur">${nbCompetitions}</div><div class="stat-libelle">Compétitions à venir</div></a>
       ${estCadre
         ? html`<a class="stat" href=${lien(['clubs'])}><div class="stat-valeur">${clubsActifs}</div><div class="stat-libelle">Clubs actifs</div></a>`
         : html`<a class="stat" href=${lien(['clubs'])}><div class="stat-valeur">${clubs.length}</div><div class="stat-libelle">Mon club</div></a>`}
@@ -58,7 +59,7 @@ export function PageAccueil({ ctx }) {
 
     <div class="stats">
       <a class=${'stat' + (nbAlertes ? ' stat-alerte' : '')} id="stat-certificats" href=${lien(['certificats'])}>
-        <div class="stat-valeur">${nbAlertes}</div><div class="stat-libelle">Certificats à suivre (manquants, expirés, bientôt)</div></a>
+        <div class="stat-valeur">${nbAlertes}</div><div class="stat-libelle">Certificats à suivre</div></a>
     </div>
   </div>`;
 }

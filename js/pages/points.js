@@ -64,6 +64,7 @@ export function PagePoints({ ctx }) {
     </section>
     <section class="carte" aria-label="Nouvelle saison">
       <h2>Nouvelle saison</h2>
+      <p class="avis">Chaque 1er juillet à 00 h 05 (heure de Tahiti), le passage se fait automatiquement : la saison suivante est créée si besoin, les licenciés sans licence sont archivés et les joueurs sous 500 points remontent à 500. Il reste à clôturer le mois de juin ici. Le bouton ci-dessous ne sert qu'en secours.</p>
       <p class="aide">À lancer à partir du 1er juillet, une fois la saison ${ctx.saison?.libelle} créée : les licenciés sans licence pour cette saison sont archivés, et les joueurs sous 500 points remontent à 500. Les classements restent conservés.</p>
       <p class="avis">Saison en cours : <strong>${ctx.saison?.libelle}</strong> (${fmtDate(ctx.saison?.date_debut)} au ${fmtDate(ctx.saison?.date_fin)})</p>
       <div class="actions"><button class="btn btn-danger" type="button" disabled=${occupe} onClick=${() => setConfirmer(true)}>Passer à la nouvelle saison</button></div>
