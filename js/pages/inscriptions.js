@@ -156,11 +156,14 @@ export function CarteInscriptions({ ctx, c }) {
       ${visibles.map((i) => {
         const club = ctx.clubParId.get(i.club_id);
         const mienne = ctx.estCadre || ctx.clubsResponsable.includes(i.club_id);
+        const interClubs = i.joueurs.some((j) => j.club_id && j.club_id !== i.club_id);
+        const mesJoueurs = ctx.estCadre ? i.joueurs : i.joueurs.filter((j) => ctx.clubsResponsable.includes(j.club_id || i.club_id));
+        const concerne = mesJoueurs.length > 0;
         return html`<li key=${i.id}>
           <div style="flex:1;min-width:0">
             <strong>${club?.nom || '—'}</strong> <${Pastille}>${TYPE_INSC[i.type]}<//>
-            <div class="aide">${i.joueurs.map((j) => { const l = ctx.licencieParId.get(j.licencie_id); return l ? nomComplet(l) : 'Joueur'; }).join(', ')}</div>
-            ${mienne && html`<small>${i.joueurs.length} × ${fmtXpf(c.montant_xpf)} = ${fmtXpf(i.joueurs.length * c.montant_xpf)}</small>`}
+            <div class="aide">${i.joueurs.map((j) => { const l = ctx.licencieParId.get(j.licencie_id); const autre = j.club_id && j.club_id !== i.club_id; return (l ? nomComplet(l) : (j.nom_affiche || 'Joueur')) + (autre ? ' (' + (ctx.clubParId.get(j.club_id)?.nom || 'autre club') + ')' : ''); }).join(', ')}</div>
+            ${(mienne || concerne) && html`<small>${mesJoueurs.length} × ${fmtXpf(c.montant_xpf)} = ${fmtXpf(mesJoueurs.length * c.montant_xpf)}${interClubs ? ' · double entre deux clubs : chaque club paie son joueur' : ''}</small>`}
           </div>
           ${mienne && agir && html`<div class="etiquettes">
             <button class="btn btn-lien" type="button" onClick=${() => setDialogue({ inscription: i })}>Modifier</button>
