@@ -6,6 +6,7 @@ import { Champ, Pastille } from '../ui.js';
 import { OngletsPublics } from './public.js';
 
 const TYPES = { simple: 'Simple', double: 'Double', equipe: 'Par équipes' };
+const MSG_INCONNU = 'Aucune fiche ne correspond. Vérifie l\'orthographe de ton prénom et de ton nom, ta date de naissance, ou utilise ton numéro de licence.';
 const xpf = (n) => (n ? `${Number(n).toLocaleString('fr-FR')} XPF` : 'Gratuit');
 
 
@@ -33,14 +34,16 @@ function CarteComp({ c, occupe, agir }) {
           ? html`<p class="aide">${c.indisponible}</p>`
           : double
             ? html`<div class="proposition">
-                <label for=${'part-' + c.id}>N° de licence de ton partenaire</label>
-                <input id=${'part-' + c.id} autocomplete="off" autocapitalize="characters" placeholder="FTTT-00123" value=${partenaire} onInput=${(e) => setPartenaire(e.target.value)} />
+                <label for=${'part-' + c.id}>N° de licence ou nom et prénom de ton partenaire</label>
+                <input id=${'part-' + c.id} autocomplete="off" autocapitalize="characters" placeholder="FTTT-00123 ou Prénom Nom" value=${partenaire} onInput=${(e) => setPartenaire(e.target.value)} />
                 <button class="btn btn-primaire" type="button" disabled=${occupe || !partenaire.trim()} onClick=${() => agir(c, 'proposer', partenaire)}>Proposer le double</button></div>`
             : html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => agir(c, 'inscrire')}>M'inscrire</button>`}`}
   </li>`;
 }
 
 export function PageSinscrire() {
+  const [prenom, setPrenom] = useState('');
+  const [nom, setNom] = useState('');
   const [numero, setNumero] = useState('');
   const [naissance, setNaissance] = useState('');
   const [moi, setMoi] = useState(null);
@@ -59,9 +62,10 @@ export function PageSinscrire() {
     e.preventDefault();
     setErreur(''); setMessage(''); setOccupe(true);
     try {
-      const n = numero.trim().toUpperCase();
-      const r = await api.athleteIdentifier(n, naissance);
-      if (r?.erreur) throw new Error(r.erreur);
+      const identifiant = numero.trim() ? numero.trim().toUpperCase() : `${prenom.trim()} ${nom.trim()}`;
+      const r = await api.athleteIdentifier(identifiant, naissance);
+      if (r?.erreur) throw new Error(MSG_INCONNU);
+      const n = r.numero;
       setMoi(r);
       await charger(n, naissance);
     } catch (err) { setErreur(msgErreur(err)); setMoi(null); setListe(null); }
@@ -80,25 +84,31 @@ export function PageSinscrire() {
       else if (action === 'annuler') { r = await api.athleteAnnulerProposition(n, naissance, cible); ok = 'Proposition annulée.'; }
       else if (action === 'accepter') { r = await api.athleteRepondreDouble(n, naissance, cible, true); ok = `Double confirmé et inscrit à « ${c.nom} ». Chaque club est facturé pour son joueur.`; }
       else { r = await api.athleteRepondreDouble(n, naissance, cible, false); ok = 'Proposition refusée.'; }
-      if (r?.erreur) throw new Error(r.erreur);
+      if (r?.erreur) throw new Error(MSG_INCONNU);
       setMessage(ok);
       await charger(n, naissance);
     } catch (err) { setErreur(msgErreur(err)); }
     setOccupe(false);
   }
 
-  function quitter() { setMoi(null); setListe(null); setNumero(''); setNaissance(''); setMessage(''); setErreur(''); }
+  function quitter() { setMoi(null); setListe(null); setPrenom(''); setNom(''); setNumero(''); setNaissance(''); setMessage(''); setErreur(''); }
 
   return html`<div class="page">
-    <div class="page-tete"><div><h1>Je m'inscris</h1><p>Inscription aux compétitions avec ton numéro de licence</p></div></div>
+    <div class="page-tete"><div><h1>Je m'inscris</h1><p>Inscription aux compétitions avec ton nom et ta date de naissance</p></div></div>
     <${OngletsPublics} actif="sinscrire" />
     ${!moi && html`<form class="carte" id="form-sinscrire" onSubmit=${connecter}>
-      <p>Saisis ton numéro de licence (par exemple FTTT-00123) et ta date de naissance. Ton club te communique ton numéro.</p>
-      <${Champ} id="s-num" libelle="Numéro de licence">
-        <input id="s-num" autocomplete="off" autocapitalize="characters" placeholder="FTTT-00123" value=${numero} onInput=${(e) => setNumero(e.target.value)} required />
+      <p>Saisis ton prénom, ton nom et ta date de naissance. Tu peux aussi utiliser ton numéro de licence (par exemple FTTT-00123), utile en cas d'homonyme.</p>
+      <${Champ} id="s-prenom" libelle="Prénom">
+        <input id="s-prenom" autocomplete="given-name" value=${prenom} onInput=${(e) => setPrenom(e.target.value)} required=${!numero.trim()} />
+      <//>
+      <${Champ} id="s-nom" libelle="Nom">
+        <input id="s-nom" autocomplete="family-name" value=${nom} onInput=${(e) => setNom(e.target.value)} required=${!numero.trim()} />
       <//>
       <${Champ} id="s-nais" libelle="Date de naissance">
         <input id="s-nais" type="date" value=${naissance} onInput=${(e) => setNaissance(e.target.value)} required />
+      <//>
+      <${Champ} id="s-num" libelle="Numéro de licence (facultatif)" aide="Si tu le remplis, il remplace le prénom et le nom.">
+        <input id="s-num" autocomplete="off" autocapitalize="characters" placeholder="FTTT-00123" value=${numero} onInput=${(e) => setNumero(e.target.value)} />
       <//>
       ${erreur && html`<p class="erreur" role="alert">${erreur}</p>`}
       <button class="btn btn-primaire" type="submit" disabled=${occupe}>${occupe ? 'Vérification…' : 'Continuer'}</button>

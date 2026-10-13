@@ -317,7 +317,7 @@ function LectureFiche({ ctx, l, estSoi }) {
 async function copierMessageNumero(l) {
   const adresse = location.origin + location.pathname + '#/sinscrire';
   const texte = `Bonjour ${l.prenom}, ton numéro de licence FTTT est ${l.numero_licence}. `
-    + `Pour t'inscrire toi-même aux compétitions, va sur ${adresse} et saisis ce numéro et ta date de naissance. `
+    + `Pour t'inscrire toi-même aux compétitions, va sur ${adresse} et saisis ton prénom, ton nom et ta date de naissance (ou ce numéro). `
     + `Garde ce numéro : il reste le même d'une saison à l'autre.`;
   try { await navigator.clipboard.writeText(texte); toast('Message copié : colle-le dans WhatsApp ou un SMS.'); }
   catch (e) { window.prompt('Copie ce message :', texte); }
