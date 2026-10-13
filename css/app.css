@@ -324,3 +324,4 @@ a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(-
 
 .groupe-titre { margin: 24px 0 8px; font-size: 18px; color: var(--brun-doux); }
 .groupe-titre:first-child { margin-top: 8px; }
+.succes { font-size: 15px; color: var(--indigo); font-weight: 600; background: var(--indigo-teinte); padding: 10px 14px; border-radius: 10px; }

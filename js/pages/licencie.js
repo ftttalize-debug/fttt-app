@@ -301,6 +301,7 @@ function LectureFiche({ ctx, l, estSoi }) {
   return html`<section class="carte" aria-label="Informations">
     <h2>Informations</h2>
     <dl class="def">
+      <div><dt>N° de licence</dt><dd>${l.numero_licence || '—'}</dd></div>
       <div><dt>Date de naissance</dt><dd>${fmtDate(l.date_naissance)} · ${l.age} ans</dd></div>
       <div><dt>Sexe</dt><dd>${l.sexe === 'F' ? 'Femme' : 'Homme'}</dd></div>
       <div><dt>Club</dt><dd>${l.clubNom}</dd></div>

@@ -33,16 +33,16 @@ export function PageLicencies({ ctx, route }) {
       .filter((l) => (q.alerte === 'representant' ? repManquant(l) : true))
       .filter((l) => {
         if (!mots.length) return true;
-        const cle = norm(`${l.prenom} ${l.nom} ${l.clubNom}`);
+        const cle = norm(`${l.prenom} ${l.nom} ${l.clubNom} ${l.numero_licence || ''}`);
         return mots.every((m) => cle.includes(m));
       })
       .sort((a, b) => norm(a.nom).localeCompare(norm(b.nom)) || norm(a.prenom).localeCompare(norm(b.prenom)));
   }, [licencies, texte, statut, q.club, q.cat, q.type, q.alerte]);
 
   function exporter() {
-    const entetes = ['Nom', 'Prénom', 'Date de naissance', 'Sexe', 'Club', 'Catégorie', 'Points', 'Statut', `Licence ${saison?.libelle || ''}`, 'E-mail', 'Téléphone'];
+    const entetes = ['N° de licence', 'Nom', 'Prénom', 'Date de naissance', 'Sexe', 'Club', 'Catégorie', 'Points', 'Statut', `Licence ${saison?.libelle || ''}`, 'E-mail', 'Téléphone'];
     const lignes = liste.map((l) => [
-      l.nom, l.prenom, fmtDate(l.date_naissance), l.sexe, l.clubNom, l.categorie, fmtPts(l.points),
+      l.numero_licence || '', l.nom, l.prenom, fmtDate(l.date_naissance), l.sexe, l.clubNom, l.categorie, fmtPts(l.points),
       l.statut === 'actif' ? 'Actif' : 'Archivé', l.courante ? TYPES_LICENCE[l.courante.type] : '', l.email || '', l.telephone || ''
     ]);
     telechargerCsv(`licencies-${aujourdhuiISO()}.csv`, entetes, lignes);
