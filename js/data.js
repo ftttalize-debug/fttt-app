@@ -122,6 +122,7 @@ export const api = {
   },
   creerTableaux: (modele, tableaux) => appeler('creer_tableaux', { p_modele: modele, p_tableaux: tableaux }),
   changerStatutEvenement: (competition, statut) => appeler('changer_statut_evenement', { p_competition: competition, p_statut: statut }),
+  supprimerEvenement: (competition) => appeler('supprimer_evenement', { p_competition: competition }),
   majCompetition: (id, patch) => modifier(sb.from('competitions').update(patch).eq('id', id)),
   supprimerCompetition: async (id) => {
     const { error } = await sb.from('competitions').delete().eq('id', id);

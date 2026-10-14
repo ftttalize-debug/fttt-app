@@ -11,7 +11,7 @@ export const TYPES_COMP = { simple: 'Simple', double: 'Double', equipe: 'Par éq
 const STATUTS = { brouillon: 'Brouillon', ouverte: 'Inscriptions ouvertes', cloturee: 'Inscriptions closes', terminee: 'Terminée' };
 const GENRE = { brouillon: 'neutre', ouverte: 'actif', cloturee: 'alerte', terminee: 'archive' };
 export const GENRES = { ouvert: 'Mixte (tous)', dames: 'Dames', messieurs: 'Messieurs', mixte: 'Mixte (1 fille + 1 garçon)', uni: 'Uni (2 filles ou 2 garçons)' };
-const CATEGORIES_MAX = { '': 'Aucune limite', U11: 'U11 et moins', U13: 'U13 et moins', U15: 'U15 et moins', U19: 'U19 et moins' };
+const CATEGORIES_MAX = { '': 'Aucune limite', VET: 'Vétérans (41 ans et plus)', U11: 'U11 et moins', U13: 'U13 et moins', U15: 'U15 et moins', U19: 'U19 et moins' };
 const COEFS = ['0.50', '0.75', '1.00', '1.25', '1.50'];
 export const fmtXpf = (n) => `${Number(n || 0).toLocaleString('fr-FR').replace(/ /g, ' ')} F`;
 const dates = (c) => (c.date_debut === c.date_fin ? fmtDate(c.date_debut) : `${fmtDate(c.date_debut)} – ${fmtDate(c.date_fin)}`);
@@ -39,6 +39,7 @@ export function PageCompetitions({ ctx, route }) {
             <${Pastille} genre=${GENRE[c.statut]}>${STATUTS[c.statut]}<//>
             <${Pastille}>${TYPES_COMP[c.type]}<//>
             ${c.categorie_max && html`<${Pastille}>${c.categorie_max}<//>`}
+            ${c.categorie_min && html`<${Pastille}>Vétérans<//>`}
             ${c.genre && c.genre !== 'ouvert' && html`<${Pastille}>${GENRES[c.genre].split(' (')[0]}<//>`}
             <${Pastille}>Coef. ${Number(c.coefficient).toLocaleString('fr-FR')}<//>
           </span>
@@ -50,19 +51,19 @@ export function PageCompetitions({ ctx, route }) {
 
 const vide = (ctx) => ({
   nom: '', saison_id: ctx.saison?.id || '', lieu: '', date_debut: '', date_fin: '', type: 'simple',
-  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: ''
+  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: '', categorie_min: ''
 });
 const depuis = (c) => ({
   nom: c.nom, saison_id: c.saison_id, lieu: c.lieu || '', date_debut: c.date_debut, date_fin: c.date_fin, type: c.type,
   coefficient: Number(c.coefficient).toFixed(2), montant_xpf: String(c.montant_xpf), date_limite_inscription: c.date_limite_inscription || '',
-  ouverte_a_tous: !!c.ouverte_a_tous, genre: c.genre || 'ouvert', categorie_max: c.categorie_max || ''
+  ouverte_a_tous: !!c.ouverte_a_tous, genre: c.genre || 'ouvert', categorie_max: c.categorie_max || '', categorie_min: c.categorie_min || ''
 });
 const norme = (f) => ({
   nom: f.nom.trim(), saison_id: f.saison_id, lieu: f.lieu.trim() || null, date_debut: f.date_debut, date_fin: f.date_fin || f.date_debut,
   type: f.type, coefficient: Number(f.coefficient), montant_xpf: parseInt(f.montant_xpf, 10),
   date_limite_inscription: f.date_limite_inscription || null, ouverte_a_tous: !!f.ouverte_a_tous,
   // Envoyés seulement s'ils sont renseignés : le site reste utilisable avant le script 026.
-  ...(f.genre !== 'ouvert' ? { genre: f.genre } : {}), ...(f.categorie_max ? { categorie_max: f.categorie_max } : {})
+  ...(f.genre !== 'ouvert' ? { genre: f.genre } : {}), ...(f.categorie_max ? { categorie_max: f.categorie_max } : {}), ...(f.categorie_min ? { categorie_min: f.categorie_min } : {})
 });
 
 function valider(f) {
@@ -124,15 +125,15 @@ function Formulaire({ ctx, c }) {
       <${Champ} id="p-fin" libelle="Date de fin" aide="Laisse vide pour un seul jour." erreur=${erreurs.date_fin}>
         <input id="p-fin" type="date" disabled=${dis} value=${f.date_fin} onInput=${(e) => maj({ date_fin: e.target.value })} /><//>
       <${Champ} id="p-type" libelle="Format">
-        <select id="p-type" disabled=${dis} value=${f.type} onChange=${(e) => maj({ type: e.target.value })}>
+        <select id="p-type" disabled=${dis} value=${f.type} onChange=${(e) => maj({ type: e.target.value, ...(e.target.value !== 'double' && (f.genre === 'mixte' || f.genre === 'uni') ? { genre: 'ouvert' } : {}) })}>
           ${Object.entries(TYPES_COMP).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
         </select><//>
-      <${Champ} id="p-genre" libelle="Genre" aide="Dames ou Messieurs : réservé. Pour un double : Mixte = 1 fille + 1 garçon ; Uni = 2 filles ou 2 garçons.">
+      <${Champ} id="p-genre" libelle="Genre" aide=${f.type === 'double' ? 'Mixte = 1 fille + 1 garçon ; Uni = 2 filles ou 2 garçons.' : 'Dames ou Messieurs : tableau réservé.'}>
         <select id="p-genre" disabled=${dis} value=${f.genre} onChange=${(e) => maj({ genre: e.target.value })}>
-          ${Object.entries(GENRES).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
+          ${Object.entries(GENRES).filter(([k]) => f.type === 'double' || (k !== 'mixte' && k !== 'uni')).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
         </select><//>
-      <${Champ} id="p-cat" libelle="Catégorie maximale" aide="Les plus jeunes peuvent jouer au-dessus de leur catégorie (surclassement), jamais en dessous.">
-        <select id="p-cat" disabled=${dis} value=${f.categorie_max} onChange=${(e) => maj({ categorie_max: e.target.value })}>
+      <${Champ} id="p-cat" libelle="Catégorie" aide="U15 et moins : les plus jeunes peuvent jouer au-dessus de leur catégorie (surclassement). Vétérans : réservé aux 41 ans et plus.">
+        <select id="p-cat" disabled=${dis} value=${f.categorie_min ? 'VET' : f.categorie_max} onChange=${(e) => maj(e.target.value === 'VET' ? { categorie_min: 'veteran', categorie_max: '' } : { categorie_min: '', categorie_max: e.target.value })}>
           ${Object.entries(CATEGORIES_MAX).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
         </select><//>
       <${Champ} id="p-coef" libelle="Coefficient" aide="Multiplie les points gagnés ou perdus à chaque match.">
@@ -176,9 +177,10 @@ function Etat({ ctx, c }) {
   async function supprimer() {
     setOccupe(true);
     try {
-      await api.supprimerCompetition(c.id);
+      if (freres.length > 1 && tous) await api.supprimerEvenement(c.id);
+      else await api.supprimerCompetition(c.id);
       await ctx.recharger();
-      toast('Compétition supprimée.');
+      toast(freres.length > 1 && tous ? `${freres.length} tableaux supprimés.` : 'Compétition supprimée.');
       naviguer(['competitions']);
     } catch (er) {
       toast(msgErreur(er), 'erreur');
@@ -198,7 +200,7 @@ function Etat({ ctx, c }) {
     ${c.statut === 'cloturee' && html`<p class="aide">Les inscriptions sont figées. Les juges-arbitres peuvent saisir les scores.</p>`}
     ${freres.length > 1 && html`<div class="case">
       <input id="p-tous-tableaux" type="checkbox" checked=${tous} onChange=${(e) => setTous(e.target.checked)} />
-      <label for="p-tous-tableaux">Appliquer à tous les tableaux de l'événement au même statut (${freres.length})</label>
+      <label for="p-tous-tableaux">Appliquer à tous les tableaux de l'événement (ouverture, clôture, suppression) (${freres.length})</label>
     </div>`}
     <div class="actions">
       ${c.statut === 'brouillon' && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => changer('ouverte', 'Inscriptions ouvertes.')}>Ouvrir les inscriptions</button>
@@ -208,8 +210,8 @@ function Etat({ ctx, c }) {
         <button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => changer('ouverte', 'Inscriptions rouvertes.')}>Rouvrir les inscriptions</button>`}
       ${c.statut === 'terminee' && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => changer('cloturee', 'Compétition réouverte aux scores.')}>Revenir à « inscriptions closes »</button>`}
     </div>
-    ${suppr && html`<${Dialogue} titre="Supprimer ce brouillon ?" onFermer=${() => setSuppr(false)}>
-      <p>« ${c.nom} » sera supprimée définitivement.</p>
+    ${suppr && html`<${Dialogue} titre=${freres.length > 1 && tous ? 'Supprimer tout l\'événement ?' : 'Supprimer ce brouillon ?'} onFermer=${() => setSuppr(false)}>
+      <p>${freres.length > 1 && tous ? `« ${c.nom} » et les ${freres.length - 1} autres tableaux en brouillon de l'événement seront supprimés définitivement.` : `« ${c.nom} » sera supprimée définitivement.`}</p>
       <div class="actions">
         <button class="btn btn-danger" type="button" disabled=${occupe} onClick=${supprimer}>Supprimer</button>
         <button class="btn btn-secondaire" type="button" onClick=${() => setSuppr(false)}>Annuler</button>
@@ -217,9 +219,9 @@ function Etat({ ctx, c }) {
   </section>`;
 }
 
-const CATS_TABLEAUX = [['', 'Open'], ['U19', 'U19'], ['U15', 'U15'], ['U13', 'U13'], ['U11', 'U11']];
+const CATS_TABLEAUX = [['', 'Open'], ['VET', 'Vétérans'], ['U19', 'U19'], ['U15', 'U15'], ['U13', 'U13'], ['U11', 'U11']];
 const GENRES_SIMPLE = [['messieurs', 'Messieurs'], ['dames', 'Dames'], ['ouvert', 'Mixte']];
-const DOUBLES = [['messieurs', 'Double messieurs'], ['dames', 'Double dames'], ['mixte', 'Double mixte'], ['uni', 'Double uni']];
+const DOUBLES = [['messieurs', 'Double messieurs'], ['dames', 'Double dames'], ['mixte', 'Double mixte'], ['uni', 'Double uni'], ['vet', 'Double vétérans']];
 
 function CarteTableaux({ ctx, c }) {
   const [ouvert, setOuvert] = useState(false);
@@ -230,14 +232,14 @@ function CarteTableaux({ ctx, c }) {
   const freres = c.evenement_id ? ctx.competitions.filter((x) => x.evenement_id === c.evenement_id && x.id !== c.id) : [];
   const bascule = (k) => setSel((s) => ({ ...s, [k]: !s[k] }));
   const lignes = [];
-  for (const [cat, catLib] of CATS_TABLEAUX) for (const [g, gLib] of GENRES_SIMPLE) lignes.push({ k: `s|${cat}|${g}`, nom: `${evt.trim()} – Simple ${catLib} ${gLib}`, type: 'simple', genre: g, categorie_max: cat });
-  for (const [g, lib] of DOUBLES) lignes.push({ k: `d||${g}`, nom: `${evt.trim()} – ${lib}`, type: 'double', genre: g, categorie_max: '' });
+  for (const [cat, catLib] of CATS_TABLEAUX) for (const [g, gLib] of GENRES_SIMPLE) lignes.push({ k: `s|${cat}|${g}`, nom: `${evt.trim()} – Simple ${catLib} ${gLib}`, type: 'simple', genre: g, categorie_max: cat === 'VET' ? '' : cat, categorie_min: cat === 'VET' ? 'veteran' : '' });
+  for (const [g, lib] of DOUBLES) lignes.push({ k: `d||${g}`, nom: `${evt.trim()} – ${lib}`, type: 'double', genre: g === 'vet' ? 'ouvert' : g, categorie_max: '', categorie_min: g === 'vet' ? 'veteran' : '' });
   const choisis = lignes.filter((l) => sel[l.k]);
   async function creer() {
     if (!/^\d+$/.test(montant.trim()) || !evt.trim()) { toast('Vérifie le nom et le montant.', 'erreur'); return; }
     setOccupe(true);
     try {
-      const n = await api.creerTableaux(c.id, choisis.map((l) => ({ nom: l.nom, type: l.type, genre: l.genre, categorie_max: l.categorie_max, montant_xpf: parseInt(montant, 10) })));
+      const n = await api.creerTableaux(c.id, choisis.map((l) => ({ nom: l.nom, type: l.type, genre: l.genre, categorie_max: l.categorie_max, categorie_min: l.categorie_min, montant_xpf: parseInt(montant, 10) })));
       await ctx.recharger();
       toast(`${n} tableau${n > 1 ? 'x créés' : ' créé'} en brouillon.`);
       setOuvert(false);
