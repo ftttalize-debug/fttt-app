@@ -17,7 +17,51 @@ const COEFS = ['0.50', '0.75', '1.00', '1.25', '1.50'];
 export const fmtXpf = (n) => `${Number(n || 0).toLocaleString('fr-FR').replace(/ /g, ' ')} F`;
 const dates = (c) => (c.date_debut === c.date_fin ? fmtDate(c.date_debut) : `${fmtDate(c.date_debut)} – ${fmtDate(c.date_fin)}`);
 
+const decaler = (iso, jours) => { if (!iso) return iso; const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + jours); return d.toISOString().slice(0, 10); };
+
+/** Reprend en brouillon les compétitions d'une saison précédente : règles identiques, dates décalées à vérifier. */
+function DialogueReprise({ ctx, onFermer }) {
+  const saisons = ctx.data.saisons.slice().sort((a, b) => String(b.date_debut).localeCompare(String(a.date_debut)));
+  const cible0 = ctx.saison?.id || saisons[0]?.id || '';
+  const precedente = saisons.find((s) => s.id !== cible0 && String(s.date_debut) < String(ctx.saison?.date_debut || '9999')) || saisons.find((s) => s.id !== cible0);
+  const [source, setSource] = useState(precedente?.id || '');
+  const [cible, setCible] = useState(cible0);
+  const [decalage, setDecalage] = useState('364');
+  const [sel, setSel] = useState(null); // null = tout coché
+  const [occupe, setOccupe] = useState(false);
+  const liste = ctx.competitions.filter((c) => c.saison_id === source);
+  const choisies = sel === null ? liste.map((c) => c.id) : sel;
+  const jours = /^-?\d+$/.test(decalage.trim()) ? parseInt(decalage, 10) : null;
+  const bascule = (id) => setSel(choisies.includes(id) ? choisies.filter((x) => x !== id) : [...choisies, id]);
+  async function creer() {
+    setOccupe(true);
+    try {
+      const n = await api.reprendreCompetitions(choisies, cible, jours);
+      await ctx.recharger();
+      toast(`${n} compétition${n > 1 ? 's' : ''} créée${n > 1 ? 's' : ''} en brouillon : vérifie les dates.`);
+      onFermer();
+    } catch (er) { toast(msgErreur(er), 'erreur'); setOccupe(false); }
+  }
+  const select = (id, val, set) => html`<select id=${id} value=${val} onChange=${(e) => { set(e.target.value); if (id === 'rp-source') setSel(null); }}>
+    ${saisons.map((s) => html`<option key=${s.id} value=${s.id}>${s.libelle}</option>`)}</select>`;
+  return html`<${Dialogue} titre="Reprendre une saison" onFermer=${onFermer}>
+    <p class="aide">Les compétitions choisies sont copiées en brouillon avec leurs règles (format, tarif, coefficient, genre, catégorie, tours). Les inscriptions, les juges-arbitres et les matchs ne sont pas repris. Les dates sont décalées : vérifie-les ensuite une par une.</p>
+    <div class="grille grille-2">
+      <${Champ} id="rp-source" libelle="Saison à reprendre">${select('rp-source', source, setSource)}<//>
+      <${Champ} id="rp-cible" libelle="Nouvelle saison">${select('rp-cible', cible, setCible)}<//>
+    </div>
+    <${Champ} id="rp-dec" libelle="Décalage des dates (jours)" aide="364 jours = un an en gardant le même jour de la semaine (un samedi reste un samedi)."><input id="rp-dec" type="text" inputmode="numeric" value=${decalage} onInput=${(e) => setDecalage(e.target.value)} /><//>
+    ${liste.length === 0 ? html`<p class="vide">Aucune compétition dans cette saison.</p>` : html`<ul class="choix-joueurs">${liste.map((c) => html`<li key=${c.id}><label class="choix-ligne">
+      <input type="checkbox" checked=${choisies.includes(c.id)} onChange=${() => bascule(c.id)} />
+      <span class="choix-nom"><strong>${c.nom}</strong><small>${dates(c)}${jours !== null ? ` → ${dates({ date_debut: decaler(c.date_debut, jours), date_fin: decaler(c.date_fin, jours) })}` : ''}</small></span></label></li>`)}</ul>`}
+    <div class="actions">
+      <button class="btn btn-primaire" type="button" disabled=${occupe || !choisies.length || jours === null || !cible || source === cible} onClick=${creer}>${occupe ? 'Création…' : `Créer ${choisies.length} brouillon${choisies.length > 1 ? 's' : ''}`}</button>
+      <button class="btn btn-secondaire" type="button" onClick=${onFermer}>Annuler</button>
+    </div><//>`;
+}
+
 export function PageCompetitions({ ctx, route }) {
+  const [reprise, setReprise] = useState(false);
   const { competitions, estCadre } = ctx;
   const statut = route.query.statut || 'toutes';
   const liste = competitions.filter((c) => statut === 'toutes' || c.statut === statut);
@@ -26,12 +70,14 @@ export function PageCompetitions({ ctx, route }) {
   return html`<div class="page">
     <div class="page-tete">
       <div><h1>Compétitions</h1><p>${competitions.length} compétition${competitions.length > 1 ? 's' : ''}</p></div>
-      ${estCadre && html`<div class="page-actions"><a class="btn btn-primaire" href=${lien(['competitions', 'nouveau'])}><${Icone} nom="plus" taille=${20} /> Nouvelle compétition</a></div>`}
+      ${estCadre && html`<div class="page-actions"><a class="btn btn-primaire" href=${lien(['competitions', 'nouveau'])}><${Icone} nom="plus" taille=${20} /> Nouvelle compétition</a>
+        <button class="btn btn-secondaire" type="button" onClick=${() => setReprise(true)}>Reprendre une saison</button></div>`}
     </div>
     <div class="puces" role="group" aria-label="Statut">
       ${puces.map(([v, label]) => html`<button key=${v} type="button" class="puce" aria-pressed=${statut === v}
         onClick=${() => naviguer(['competitions'], v === 'toutes' ? {} : { statut: v }, true)}>${label}</button>`)}
     </div>
+    ${reprise && html`<${DialogueReprise} ctx=${ctx} onFermer=${() => setReprise(false)} />`}
     ${liste.length === 0 ? html`<p class="vide">Aucune compétition.</p>` : html`<ul class="liste">
       ${liste.map((c) => html`<li key=${c.id}>
         <a class="ligne" style="display:flex" href=${lien(['competitions', c.id])}>
