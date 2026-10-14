@@ -61,7 +61,8 @@ const norme = (f) => ({
   nom: f.nom.trim(), saison_id: f.saison_id, lieu: f.lieu.trim() || null, date_debut: f.date_debut, date_fin: f.date_fin || f.date_debut,
   type: f.type, coefficient: Number(f.coefficient), montant_xpf: parseInt(f.montant_xpf, 10),
   date_limite_inscription: f.date_limite_inscription || null, ouverte_a_tous: !!f.ouverte_a_tous,
-  genre: f.genre, categorie_max: f.categorie_max || null
+  // Envoyés seulement s'ils sont renseignés : le site reste utilisable avant le script 026.
+  ...(f.genre !== 'ouvert' ? { genre: f.genre } : {}), ...(f.categorie_max ? { categorie_max: f.categorie_max } : {})
 });
 
 function valider(f) {
