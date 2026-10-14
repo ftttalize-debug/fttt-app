@@ -1,4 +1,4 @@
-# Diagnostic temporaire : ce que voit un serveur GitHub pour app.fttt.pf (à supprimer ensuite)
+# Diagnostic temporaire (relance 2) : ce que voit un serveur GitHub pour app.fttt.pf (à supprimer ensuite)
 name: diag-dns
 on:
   push:
