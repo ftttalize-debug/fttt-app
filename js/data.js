@@ -111,8 +111,8 @@ export const api = {
   },
   genererFactures: (competition) => appeler('generer_factures', { p_competition: competition }),
   changerStatutFacture: (facture, statut) => appeler('changer_statut_facture', { p_facture: facture, p_statut: statut }),
-  enregistrerInscription: (competition, club, joueurs, inscription = null) =>
-    appeler('enregistrer_inscription', { p_competition: competition, p_club: club, p_joueurs: joueurs, p_inscription: inscription }),
+  enregistrerInscription: (competition, club, joueurs, inscription = null, nomEquipe = null) =>
+    appeler('enregistrer_inscription', { p_competition: competition, p_club: club, p_joueurs: joueurs, p_inscription: inscription, ...(nomEquipe ? { p_nom_equipe: nomEquipe } : {}) }),
   annulerInscription: (id) => appeler('annuler_inscription', { p_inscription: id }),
 
   creerCompetition: async (c) => {

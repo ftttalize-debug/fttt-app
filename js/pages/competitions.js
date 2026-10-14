@@ -140,7 +140,7 @@ function Formulaire({ ctx, c }) {
         <select id="p-coef" disabled=${dis} value=${f.coefficient} onChange=${(e) => maj({ coefficient: e.target.value })}>
           ${COEFS.map((k) => html`<option key=${k} value=${k}>${Number(k).toLocaleString('fr-FR')}</option>`)}
         </select><//>
-      <${Champ} id="p-montant" libelle="Montant par participant (F CFP)" erreur=${erreurs.montant}>
+      <${Champ} id="p-montant" libelle=${f.type === 'equipe' ? 'Montant par équipe (F CFP)' : 'Montant par participant (F CFP)'} erreur=${erreurs.montant}>
         <input id="p-montant" type="text" inputmode="numeric" disabled=${dis} value=${f.montant_xpf} onInput=${(e) => maj({ montant_xpf: e.target.value })} /><//>
       <${Champ} id="p-limite" libelle="Date limite d'inscription" aide="Après cette date, les clubs ne peuvent plus inscrire ni modifier." erreur=${erreurs.limite}>
         <input id="p-limite" type="date" disabled=${dis} value=${f.date_limite_inscription} onInput=${(e) => maj({ date_limite_inscription: e.target.value })} /><//>
@@ -287,7 +287,7 @@ export function PageCompetition({ ctx, id }) {
   return html`<div class="page">
     <a class="retour" href=${lien(['competitions'])}><${Icone} nom="retour" taille=${20} /> Compétitions</a>
     <div class="page-tete"><div><h1>${c ? c.nom : 'Nouvelle compétition'}</h1>
-      ${c && html`<p>${dates(c)}${c.lieu ? ' · ' + c.lieu : ''} · ${TYPES_COMP[c.type]} · Coef. ${Number(c.coefficient).toLocaleString('fr-FR')} · ${fmtXpf(c.montant_xpf)} par participant</p>`}</div></div>
+      ${c && html`<p>${dates(c)}${c.lieu ? ' · ' + c.lieu : ''} · ${TYPES_COMP[c.type]} · Coef. ${Number(c.coefficient).toLocaleString('fr-FR')} · ${fmtXpf(c.montant_xpf)} par ${c.type === 'equipe' ? 'équipe' : 'participant'}</p>`}</div></div>
     ${c && ctx.estCadre && html`<${Etat} ctx=${ctx} c=${c} />`}
     ${c && (ctx.estCadre || c.evenement_id) && html`<${CarteTableaux} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteInscriptions} ctx=${ctx} c=${c} />`}

@@ -6,6 +6,8 @@ import { Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { fmtXpf } from './competitions.js';
 
 const TYPE_INSC = { individuelle: 'Simple', paire: 'Double', equipe: 'Équipe' };
+/** Montant d'une inscription : un tarif par équipe, sinon un tarif par joueur. */
+const montantInsc = (c, nbJoueurs) => (c.type === 'equipe' ? c.montant_xpf : nbJoueurs * c.montant_xpf);
 
 function inscriptionsActives(ctx, c) {
   return ctx.inscriptions.filter((i) => i.competition_id === c.id && i.statut === 'active');
@@ -36,6 +38,7 @@ function DialogueInscription({ ctx, c, clubs, inscription, onFermer }) {
   const [clubId, setClubId] = useState(inscription?.club_id || clubs[0]?.id || '');
   const [sel, setSel] = useState(inscription ? inscription.joueurs.map((j) => j.licencie_id) : []);
   const [texte, setTexte] = useState('');
+  const [nomEquipe, setNomEquipe] = useState(inscription?.nom_equipe || '');
   const [occupe, setOccupe] = useState(false);
   const max = c.type === 'double' ? 2 : Infinity;
 
@@ -68,7 +71,7 @@ function DialogueInscription({ ctx, c, clubs, inscription, onFermer }) {
   async function envoyer() {
     setOccupe(true);
     try {
-      await api.enregistrerInscription(c.id, clubId, sel, inscription?.id || null);
+      await api.enregistrerInscription(c.id, clubId, sel, inscription?.id || null, c.type === 'equipe' ? nomEquipe.trim() : null);
       await ctx.recharger();
       toast(edition ? 'Inscription modifiée.' : 'Inscription enregistrée.');
       onFermer();
@@ -83,6 +86,8 @@ function DialogueInscription({ ctx, c, clubs, inscription, onFermer }) {
       <select id="i-club" value=${clubId} onChange=${(e) => changerClub(e.target.value)}>
         ${clubs.map((k) => html`<option key=${k.id} value=${k.id}>${k.nom}</option>`)}
       </select><//>`}
+    ${c.type === 'equipe' && html`<${Champ} id="i-nom" libelle="Nom de l'équipe" aide="Par exemple « AITO 1 ». Laisse vide pour un nom automatique (club + numéro).">
+      <input id="i-nom" type="text" value=${nomEquipe} onInput=${(e) => setNomEquipe(e.target.value)} /><//>`}
     <p class="aide">${aide}</p>
     <div class="recherche"><${Icone} nom="recherche" taille=${20} /><input type="search" aria-label="Rechercher un joueur" placeholder="Nom ou prénom" value=${texte} onInput=${(e) => setTexte(e.target.value)} /></div>
     <ul class="choix-joueurs">
@@ -99,7 +104,7 @@ function DialogueInscription({ ctx, c, clubs, inscription, onFermer }) {
         </li>`;
       })}
     </ul>
-    <p class="avis"><strong>${sel.length}</strong> joueur${sel.length > 1 ? 's' : ''} · montant ${fmtXpf(sel.length * c.montant_xpf)}</p>
+    <p class="avis"><strong>${sel.length}</strong> joueur${sel.length > 1 ? 's' : ''} · ${c.type === 'equipe' ? 'tarif par équipe' : 'montant'} ${fmtXpf(montantInsc(c, sel.length))}</p>
     <div class="actions">
       <button class="btn btn-primaire" type="button" disabled=${!valide || occupe} onClick=${envoyer}>${occupe ? 'Enregistrement…' : 'Enregistrer'}</button>
       <button class="btn btn-secondaire" type="button" onClick=${onFermer}>Annuler</button>
@@ -119,17 +124,18 @@ export function CarteInscriptions({ ctx, c }) {
   const agir = gere.length > 0 && peutAgir(ctx, c);
   const clubsPossibles = c.type === 'simple' ? gere.filter((k) => !toutes.some((i) => i.club_id === k.id)) : gere;
   const nbJoueurs = toutes.reduce((n, i) => n + i.joueurs.length, 0);
+  const montantTotal = toutes.reduce((n, i) => n + montantInsc(c, i.joueurs.length), 0);
 
   function exporter() {
     const lignes = [];
     visibles.filter((i) => ctx.estCadre || ctx.clubsResponsable.includes(i.club_id)).forEach((i) => {
       i.joueurs.forEach((j, k) => {
         const l = ctx.licencieParId.get(j.licencie_id);
-        lignes.push([c.nom, ctx.clubParId.get(i.club_id)?.nom || '', TYPE_INSC[i.type], k + 1, l?.nom || '', l?.prenom || '', l?.categorie || '', l ? fmtPts(l.points) : '', c.montant_xpf]);
+        lignes.push([c.nom, ctx.clubParId.get(i.club_id)?.nom || '', i.nom_equipe || '', TYPE_INSC[i.type], k + 1, l?.nom || '', l?.prenom || '', l?.categorie || '', l ? fmtPts(l.points) : '', c.type === 'equipe' ? (k === 0 ? c.montant_xpf : 0) : c.montant_xpf]);
       });
     });
     telechargerCsv(`inscriptions-${norm(c.nom).replace(/[^a-z0-9]+/g, '-')}-${aujourdhuiISO()}.csv`,
-      ['Compétition', 'Club', 'Type', 'Rang', 'Nom', 'Prénom', 'Catégorie', 'Points actuels', 'Montant par participant (XPF)'], lignes);
+      ['Compétition', 'Club', 'Équipe', 'Type', 'Rang', 'Nom', 'Prénom', 'Catégorie', 'Points actuels', 'Montant (XPF)'], lignes);
   }
 
   async function annuler() {
@@ -149,7 +155,7 @@ export function CarteInscriptions({ ctx, c }) {
   return html`<section class="carte" aria-label="Inscriptions">
     <h2>Inscriptions</h2>
     ${visibles.length > 0 && html`<p><button class="btn btn-secondaire" type="button" id="exp-inscriptions" onClick=${exporter}><${Icone} nom="telecharger" taille=${18} /> Exporter (CSV)</button></p>`}
-    ${ctx.estCadre && html`<p class="aide">${toutes.length} inscription${toutes.length > 1 ? 's' : ''} · ${nbJoueurs} joueur${nbJoueurs > 1 ? 's' : ''} · ${fmtXpf(nbJoueurs * c.montant_xpf)} au total</p>`}
+    ${ctx.estCadre && html`<p class="aide">${toutes.length} inscription${toutes.length > 1 ? 's' : ''} · ${nbJoueurs} joueur${nbJoueurs > 1 ? 's' : ''} · ${fmtXpf(montantTotal)} au total</p>`}
     ${gere.length > 0 && !agir && c.statut === 'ouverte' && html`<p class="avis">La date limite est passée (${fmtDate(c.date_limite_inscription)}). Contacte la fédération pour toute modification.</p>`}
     ${gere.length > 0 && c.statut !== 'ouverte' && !ctx.estCadre && html`<p class="avis">Les inscriptions sont closes.</p>`}
     ${visibles.length === 0 ? html`<p class="aide">Aucune inscription pour le moment.</p>` : html`<ul class="historique inscriptions">
@@ -161,9 +167,9 @@ export function CarteInscriptions({ ctx, c }) {
         const concerne = mesJoueurs.length > 0;
         return html`<li key=${i.id}>
           <div style="flex:1;min-width:0">
-            <strong>${club?.nom || '—'}</strong> <${Pastille}>${TYPE_INSC[i.type]}<//>
+            <strong>${i.nom_equipe || club?.nom || '—'}</strong> <${Pastille}>${TYPE_INSC[i.type]}<//>${i.nom_equipe && html` <small>${club?.nom || ''}</small>`}
             <div class="aide">${i.joueurs.map((j) => { const l = ctx.licencieParId.get(j.licencie_id); const autre = j.club_id && j.club_id !== i.club_id; return (l ? nomComplet(l) : (j.nom_affiche || 'Joueur')) + (autre ? ' (' + (ctx.clubParId.get(j.club_id)?.nom || 'autre club') + ')' : ''); }).join(', ')}</div>
-            ${(mienne || concerne) && html`<small>${mesJoueurs.length} × ${fmtXpf(c.montant_xpf)} = ${fmtXpf(mesJoueurs.length * c.montant_xpf)}${interClubs ? ' · double entre deux clubs : chaque club paie son joueur' : ''}</small>`}
+            ${(mienne || concerne) && html`<small>${c.type === 'equipe' ? `Tarif par équipe : ${fmtXpf(c.montant_xpf)}` : `${mesJoueurs.length} × ${fmtXpf(c.montant_xpf)} = ${fmtXpf(mesJoueurs.length * c.montant_xpf)}`}${interClubs ? ' · double entre deux clubs : chaque club paie son joueur' : ''}</small>`}
           </div>
           ${mienne && agir && html`<div class="etiquettes">
             <button class="btn btn-lien" type="button" onClick=${() => setDialogue({ inscription: i })}>Modifier</button>
@@ -178,7 +184,7 @@ export function CarteInscriptions({ ctx, c }) {
     ${dialogue && html`<${DialogueInscription} ctx=${ctx} c=${c} clubs=${dialogue.inscription ? ctx.clubs.filter((k) => k.id === dialogue.inscription.club_id) : clubsPossibles}
       inscription=${dialogue.inscription} onFermer=${() => setDialogue(null)} />`}
     ${aAnnuler && html`<${Dialogue} titre="Annuler cette inscription ?" onFermer=${() => setAAnnuler(null)}>
-      <p>L’inscription de ${ctx.clubParId.get(aAnnuler.club_id)?.nom} (${aAnnuler.joueurs.length} joueur${aAnnuler.joueurs.length > 1 ? 's' : ''}) sera annulée.</p>
+      <p>L’inscription de ${aAnnuler.nom_equipe || ctx.clubParId.get(aAnnuler.club_id)?.nom} (${aAnnuler.joueurs.length} joueur${aAnnuler.joueurs.length > 1 ? 's' : ''}) sera annulée.</p>
       <div class="actions">
         <button class="btn btn-danger" type="button" disabled=${occupe} onClick=${annuler}>Annuler l’inscription</button>
         <button class="btn btn-secondaire" type="button" onClick=${() => setAAnnuler(null)}>Garder</button>

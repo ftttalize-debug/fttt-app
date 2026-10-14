@@ -107,10 +107,12 @@ export async function telechargerFacture(ctx, facture) {
   const competition = ctx.competitionParId.get(insc?.competition_id);
   const club = ctx.clubParId.get(facture.club_id);
   if (!insc || !competition || !club) throw new Error('Données de la facture introuvables.');
-  const joueurs = insc.joueurs.filter((j) => !j.club_id || j.club_id === facture.club_id).map((j) => {
+  let joueurs = insc.joueurs.filter((j) => !j.club_id || j.club_id === facture.club_id).map((j) => {
     const l = ctx.licencieParId.get(j.licencie_id);
     return { nom: l ? nomComplet(l) : (j.nom_affiche || 'Joueur') };
   });
+  // Une équipe est facturée au tarif d'une équipe : une seule ligne.
+  if (insc.type === 'equipe') joueurs = [{ nom: `équipe ${insc.nom_equipe || club.nom} (${joueurs.length} joueurs)` }];
   const doc = await construireFacture({ facture, club, competition, joueurs, federation: ctx.federation });
   doc.save(`${facture.numero}.pdf`);
 }
