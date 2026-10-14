@@ -241,11 +241,39 @@ export function OngletsPublics({ actif }) {
   </div>`;
 }
 
+// Installation de l'application (PWA) : l'événement peut arriver avant l'affichage de la page.
+let invitation = null;
+const ecouteurs = new Set();
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); invitation = e; ecouteurs.forEach((f) => f()); });
+  window.addEventListener('appinstalled', () => { invitation = null; ecouteurs.forEach((f) => f()); });
+}
+const dejaInstallee = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+export function BoutonInstaller() {
+  const [, maj] = useState(0);
+  const [aide, setAide] = useState(false);
+  useEffect(() => { const f = () => maj((n) => n + 1); ecouteurs.add(f); return () => ecouteurs.delete(f); }, []);
+  if (dejaInstallee()) return null;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  async function installer() {
+    if (invitation) { invitation.prompt(); try { await invitation.userChoice; } catch (e) {} invitation = null; maj((n) => n + 1); }
+    else setAide(!aide);
+  }
+  return html`<div class="installer">
+    <button class="btn btn-secondaire" type="button" id="btn-installer" onClick=${installer}>Installer l'application</button>
+    ${aide && html`<p class="aide">${ios
+      ? 'Sur iPhone : touchez le bouton Partager de Safari, puis « Sur l\'écran d\'accueil ».'
+      : 'Ouvrez le menu de votre navigateur (⋮), puis choisissez « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».'}</p>`}
+  </div>`;
+}
+
 export function PagePublique({ route, connecte }) {
   const onglet = route.parts[0] === 'resultats' ? 'resultats' : 'classement';
   return html`<div class="page">
     <div class="page-tete"><div><h1>${onglet === 'classement' ? 'Classement' : 'Résultats'}</h1><p>Fédération Tahitienne de Tennis de Table</p></div></div>
     <${OngletsPublics} actif=${onglet} />
+    <${BoutonInstaller} />
     ${onglet === 'classement' ? html`<${Classement} />` : html`<${Resultats} initial=${route.query?.competition} />`}
   </div>`;
 }
