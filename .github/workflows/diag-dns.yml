@@ -17,16 +17,7 @@ jobs:
         run: |
           sudo apt-get -qq update >/dev/null 2>&1; sudo apt-get -qq install -y dnsutils >/dev/null 2>&1
           n() { echo "::notice title=$1::$(echo "$2" | tr '\n' ' ' | sed 's/  */ /g' | cut -c1-900)"; }
-          n "resolveur CNAME" "$(dig +time=5 +tries=2 app.fttt.pf CNAME | grep -E 'status:|IN\s+CNAME|Query time')"
-          n "resolveur TXT" "$(dig +time=5 +tries=2 _github-pages-challenge-ftttalize-debug.app.fttt.pf TXT | grep -E 'status:|IN\s+TXT|Query time')"
-          for s in ns1.mana.pf ns2.mana.pf ns03.pf; do
-            n "parent $s" "$(dig +time=5 +tries=2 +norec fttt.pf NS @$s 2>&1 | grep -E 'status:|IN\s+NS|Query time|timed out|no servers')"
-          done
-          for s in nsa.n0c.com nsb.n0c.com nsc.n0c.com; do
-            n "$s UDP" "$(dig +time=5 +tries=2 +norec app.fttt.pf CNAME @$s 2>&1 | grep -E 'status:|IN\s+CNAME|Query time|timed out|no servers')"
-            n "$s TCP" "$(dig +tcp +time=5 +tries=2 +norec app.fttt.pf CNAME @$s 2>&1 | grep -E 'status:|IN\s+CNAME|Query time|timed out|no servers')"
-            n "$s TXT" "$(dig +time=5 +tries=2 +norec _github-pages-challenge-ftttalize-debug.app.fttt.pf TXT @$s +short 2>&1)"
-          done
-          n "trace" "$(dig +trace +time=5 app.fttt.pf CNAME 2>&1 | grep -vE '^;|^$' | awk '{print $1,$4,$5}' | tail -15)"
+          n "nsc" "$(dig +time=5 +tries=2 +norec app.fttt.pf CNAME @nsc.n0c.com 2>&1 | grep -E 'status:|IN\s+CNAME|timed out')"
+          n "planethoster" "$(for s in nsa.planethoster.net nsb.planethoster.net; do dig +time=5 +tries=1 +norec app.fttt.pf CNAME @$s 2>&1 | grep -E 'status:|IN\s+(CNAME|SOA)|timed out|no servers'; done)"
           n "api pages" "$(gh api repos/${{ github.repository }}/pages 2>&1 | head -c 800)"
           n "api health" "$(gh api repos/${{ github.repository }}/pages/health 2>&1 | head -c 800)"
