@@ -19,12 +19,12 @@ function peutAgir(ctx, c) {
   return c.statut === 'ouverte' && (!c.date_limite_inscription || aujourdhuiISO() <= c.date_limite_inscription);
 }
 
-function licencePourCompetition(l, c) {
+export function licencePourCompetition(l, c) {
   return l.historique.find((x) => x.saison_id === c.saison_id && x.statut === 'active') || null;
 }
 
 /** Raison pour laquelle un joueur ne peut pas être choisi (null = éligible). */
-function raisonRefus(l, c, dejaPris) {
+export function raisonRefus(l, c, dejaPris) {
   if (l.statut !== 'actif') return 'Non licencié cette saison';
   const lc = licencePourCompetition(l, c);
   if (!lc) return 'Pas de licence pour cette saison';
@@ -65,13 +65,14 @@ function DialogueInscription({ ctx, c, clubs, inscription, onFermer }) {
   }
   function changerClub(id) { setClubId(id); setSel([]); }
 
-  const valide = c.type === 'double' ? sel.length === 2 : c.type === 'equipe' ? sel.length >= 2 : sel.length >= 1;
+  const equipe = c.type === 'equipe';
+  const valide = c.type === 'double' ? sel.length === 2 : equipe ? true : sel.length >= 1;
   const aide = c.type === 'double' ? 'Choisis exactement 2 joueurs.' : c.type === 'equipe' ? 'Choisis au moins 2 joueurs. L’ordre de sélection fixe l’ordre dans l’équipe.' : 'Choisis les joueurs du club à inscrire.';
 
   async function envoyer() {
     setOccupe(true);
     try {
-      await api.enregistrerInscription(c.id, clubId, sel, inscription?.id || null, c.type === 'equipe' ? nomEquipe.trim() : null);
+      await api.enregistrerInscription(c.id, clubId, equipe ? [] : sel, inscription?.id || null, equipe ? nomEquipe.trim() : null);
       await ctx.recharger();
       toast(edition ? 'Inscription modifiée.' : 'Inscription enregistrée.');
       onFermer();
@@ -88,7 +89,8 @@ function DialogueInscription({ ctx, c, clubs, inscription, onFermer }) {
       </select><//>`}
     ${c.type === 'equipe' && html`<${Champ} id="i-nom" libelle="Nom de l'équipe" aide="Par exemple « AITO 1 ». Laisse vide pour un nom automatique (club + numéro).">
       <input id="i-nom" type="text" value=${nomEquipe} onInput=${(e) => setNomEquipe(e.target.value)} /><//>`}
-    <p class="aide">${aide}</p>
+    ${equipe ? html`<p class="aide">Inscris l'équipe sans liste de joueurs : le juge-arbitre aligne les joueurs de ton club à chaque rencontre, et l'effectif se forme au fil des matchs. Un joueur qui a joué pour une équipe y reste pour toute la compétition.</p>
+      <p class="avis">Tarif par équipe : <strong>${fmtXpf(c.montant_xpf)}</strong></p>` : html`<p class="aide">${aide}</p>
     <div class="recherche"><${Icone} nom="recherche" taille=${20} /><input type="search" aria-label="Rechercher un joueur" placeholder="Nom ou prénom" value=${texte} onInput=${(e) => setTexte(e.target.value)} /></div>
     <ul class="choix-joueurs">
       ${joueurs.length === 0 && html`<li class="vide">Aucun joueur.</li>`}
@@ -104,7 +106,7 @@ function DialogueInscription({ ctx, c, clubs, inscription, onFermer }) {
         </li>`;
       })}
     </ul>
-    <p class="avis"><strong>${sel.length}</strong> joueur${sel.length > 1 ? 's' : ''} · ${c.type === 'equipe' ? 'tarif par équipe' : 'montant'} ${fmtXpf(montantInsc(c, sel.length))}</p>
+    <p class="avis"><strong>${sel.length}</strong> joueur${sel.length > 1 ? 's' : ''} · montant ${fmtXpf(montantInsc(c, sel.length))}</p>`}
     <div class="actions">
       <button class="btn btn-primaire" type="button" disabled=${!valide || occupe} onClick=${envoyer}>${occupe ? 'Enregistrement…' : 'Enregistrer'}</button>
       <button class="btn btn-secondaire" type="button" onClick=${onFermer}>Annuler</button>
@@ -168,7 +170,7 @@ export function CarteInscriptions({ ctx, c }) {
         return html`<li key=${i.id}>
           <div style="flex:1;min-width:0">
             <strong>${i.nom_equipe || club?.nom || '—'}</strong> <${Pastille}>${TYPE_INSC[i.type]}<//>${i.nom_equipe && html` <small>${club?.nom || ''}</small>`}
-            <div class="aide">${i.joueurs.map((j) => { const l = ctx.licencieParId.get(j.licencie_id); const autre = j.club_id && j.club_id !== i.club_id; return (l ? nomComplet(l) : (j.nom_affiche || 'Joueur')) + (autre ? ' (' + (ctx.clubParId.get(j.club_id)?.nom || 'autre club') + ')' : ''); }).join(', ')}</div>
+            <div class="aide">${i.type === 'equipe' && i.joueurs.length === 0 ? 'Effectif : se forme au fil des matchs' : i.joueurs.map((j) => { const l = ctx.licencieParId.get(j.licencie_id); const autre = j.club_id && j.club_id !== i.club_id; return (l ? nomComplet(l) : (j.nom_affiche || 'Joueur')) + (autre ? ' (' + (ctx.clubParId.get(j.club_id)?.nom || 'autre club') + ')' : ''); }).join(', ')}</div>
             ${(mienne || concerne) && html`<small>${c.type === 'equipe' ? `Tarif par équipe : ${fmtXpf(c.montant_xpf)}` : `${mesJoueurs.length} × ${fmtXpf(c.montant_xpf)} = ${fmtXpf(mesJoueurs.length * c.montant_xpf)}`}${interClubs ? ' · double entre deux clubs : chaque club paie son joueur' : ''}</small>`}
           </div>
           ${mienne && agir && html`<div class="etiquettes">

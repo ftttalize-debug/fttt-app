@@ -105,6 +105,7 @@ export const api = {
     }),
   creerRencontre: (competition, tour, date, equipeA, equipeB) =>
     appeler('creer_rencontre', { p_competition: competition, p_tour: tour, p_date: date || null, p_equipe_a: equipeA, p_equipe_b: equipeB }),
+  retirerJoueurEquipe: (inscription, licencie) => appeler('retirer_joueur_equipe', { p_inscription: inscription, p_licencie: licencie }),
   creerTour: (competition, nom, date) => appeler('creer_tour', { p_competition: competition, p_nom: nom, p_date: date }),
   modifierTour: (id, nom, date) => appeler('modifier_tour', { p_tour: id, p_nom: nom, p_date: date }),
   supprimerTour: (id) => appeler('supprimer_tour', { p_tour: id }),

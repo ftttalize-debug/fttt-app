@@ -1,9 +1,10 @@
 // Compétitions par équipes : rencontres par tour, feuille de rencontre (joueurs alignés), matchs, classement des équipes.
 import { html, useState, useMemo } from '../preact.js';
 import { api } from '../data.js';
-import { nomComplet, fmtDate, msgErreur } from '../lib.js';
+import { nomComplet, fmtDate, fmtPts, norm, msgErreur } from '../lib.js';
 import { Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { DialogueMatch, LigneMatch } from './matchs.js';
+import { raisonRefus } from './inscriptions.js';
 
 const TOURS = ['Journée 1', 'Journée 2', 'Journée 3', 'Journée 4', 'Journée 5', 'Journée 6', 'Demi-finale', 'Finale'];
 
@@ -51,11 +52,26 @@ function DialogueRencontre({ ctx, c, equipes, onFermer }) {
     </div><//>`;
 }
 
-function DialogueComposition({ ctx, r, equipe, onFermer }) {
+function DialogueComposition({ ctx, c, r, equipe, onFermer }) {
   const deja = ctx.compositions.filter((x) => x.rencontre_id === r.id && x.inscription_id === equipe.id).sort((a, b) => (a.rang || 0) - (b.rang || 0)).map((x) => x.licencie_id);
   const [sel, setSel] = useState(deja);
+  const [texte, setTexte] = useState('');
   const [occupe, setOccupe] = useState(false);
-  const bascule = (id) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  // joueurs déjà dans l'effectif d'une autre équipe de la compétition : bloqués pour toute la compétition
+  const bloques = useMemo(() => {
+    const m = new Map();
+    ctx.inscriptions.filter((i) => i.competition_id === c.id && i.statut === 'active' && i.type === 'equipe' && i.id !== equipe.id)
+      .forEach((i) => i.joueurs.forEach((j) => m.set(j.licencie_id, nomEquipe(ctx, i))));
+    return m;
+  }, [ctx.inscriptions, c.id, equipe.id]);
+  const candidats = useMemo(() => {
+    const mots = norm(texte).split(/\s+/).filter(Boolean);
+    return ctx.licencies.filter((l) => l.club_id === equipe.club_id)
+      .filter((l) => mots.every((m) => norm(`${l.prenom} ${l.nom}`).includes(m)))
+      .map((l) => ({ l, raison: bloques.has(l.id) ? `Joue pour ${bloques.get(l.id)}` : raisonRefus(l, c, new Set()), dansEquipe: equipe.joueurs.some((j) => j.licencie_id === l.id) }))
+      .sort((a, b) => (a.raison ? 1 : 0) - (b.raison ? 1 : 0) || (b.dansEquipe ? 1 : 0) - (a.dansEquipe ? 1 : 0) || norm(a.l.nom).localeCompare(norm(b.l.nom)));
+  }, [ctx.licencies, texte, bloques, equipe.joueurs]);
+  const bascule = (id) => setSel((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
   async function envoyer() {
     setOccupe(true);
     try {
@@ -66,11 +82,12 @@ function DialogueComposition({ ctx, r, equipe, onFermer }) {
     } catch (er) { toast(msgErreur(er), 'erreur'); setOccupe(false); }
   }
   return html`<${Dialogue} titre=${`Joueurs alignés : ${nomEquipe(ctx, equipe)}`} onFermer=${onFermer}>
-    <p class="aide">Coche les joueurs présents pour cette rencontre. Les absents restent inscrits dans l'équipe mais ne jouent pas.</p>
-    <ul class="choix-joueurs">${equipe.joueurs.map((j) => { const l = ctx.licencieParId.get(j.licencie_id); const rang = sel.indexOf(j.licencie_id) + 1;
-      return html`<li key=${j.licencie_id}><label class="choix-ligne">
-        <input type="checkbox" checked=${rang > 0} onChange=${() => bascule(j.licencie_id)} />
-        <span class="choix-nom"><strong>${l ? nomComplet(l) : j.nom_affiche || 'Joueur'}</strong></span>
+    <p class="aide">Coche les joueurs présents parmi les licenciés du club. Un joueur rejoint l'effectif de l'équipe dès son premier match saisi, et ne peut plus jouer pour une autre équipe de cette compétition.</p>
+    <div class="recherche"><input type="search" aria-label="Rechercher un joueur" placeholder="Nom ou prénom" value=${texte} onInput=${(e) => setTexte(e.target.value)} /></div>
+    <ul class="choix-joueurs">${candidats.length === 0 && html`<li class="vide">Aucun joueur.</li>`}${candidats.map(({ l, raison, dansEquipe }) => { const rang = sel.indexOf(l.id) + 1;
+      return html`<li key=${l.id}><label class=${'choix-ligne' + (raison ? ' choix-inactif' : '')}>
+        <input type="checkbox" checked=${rang > 0} disabled=${!!raison} onChange=${() => bascule(l.id)} />
+        <span class="choix-nom"><strong>${nomComplet(l)}</strong><small>${raison || (dansEquipe ? 'Dans l\'effectif' : `${l.categorie} · ${fmtPts(l.points)} pts`)}</small></span>
         ${rang > 0 && html`<${Pastille} genre="actif">N° ${rang}<//>`}</label></li>`; })}</ul>
     <p class="avis"><strong>${sel.length}</strong> joueur${sel.length > 1 ? 's' : ''} aligné${sel.length > 1 ? 's' : ''}</p>
     <div class="actions">
@@ -119,7 +136,7 @@ function Rencontre({ ctx, c, r, peutSaisir }) {
       </div>
       ${peutSaisir && !pret && html`<p class="aide">Aligne d'abord les joueurs des deux équipes (feuille de rencontre).</p>`}
     </div>`}
-    ${dialogue?.comp && html`<${DialogueComposition} ctx=${ctx} r=${r} equipe=${dialogue.comp} onFermer=${() => setDialogue(null)} />`}
+    ${dialogue?.comp && html`<${DialogueComposition} ctx=${ctx} c=${c} r=${r} equipe=${dialogue.comp} onFermer=${() => setDialogue(null)} />`}
     ${(dialogue?.saisie || dialogue?.match) && html`<${DialogueMatch} ctx=${ctx} c=${c} match=${dialogue.match}
       rencontre=${{ id: r.id, tour: r.tour, listeA, listeB, nomA: nomEquipe(ctx, ea), nomB: nomEquipe(ctx, eb) }} onFermer=${() => setDialogue(null)} />`}
   </li>`;
@@ -184,6 +201,22 @@ export function CarteTours({ ctx, c }) {
   </section>`;
 }
 
+/** Effectif de chaque équipe, déduit des matchs joués. Le cadre peut retirer un joueur qui n'a aucun match. */
+function Effectifs({ ctx, c, equipes, peut }) {
+  const [occupe, setOccupe] = useState(false);
+  if (!equipes.length) return null;
+  async function retirer(i, j) {
+    setOccupe(true);
+    try { await api.retirerJoueurEquipe(i.id, j.licencie_id); await ctx.recharger(); toast('Joueur retiré de l\'effectif.'); } catch (er) { toast(msgErreur(er), 'erreur'); } finally { setOccupe(false); }
+  }
+  return html`<div><h3>Effectifs des équipes</h3>
+    <p class="aide">L'effectif se forme au fil des matchs : un joueur qui a joué pour une équipe y reste pour toute la compétition.</p>
+    <ul class="historique">${equipes.map((i) => html`<li key=${i.id} style="display:block"><strong>${nomEquipe(ctx, i)}</strong> <small>${ctx.clubParId.get(i.club_id)?.nom || ''}</small>
+      ${i.joueurs.length === 0 ? html`<div class="aide">Aucun joueur pour le moment.</div>` : html`<div class="aide">${i.joueurs.map((j, k) => { const l = ctx.licencieParId.get(j.licencie_id);
+        return html`${k > 0 ? ', ' : ''}${l ? nomComplet(l) : j.nom_affiche || 'Joueur'}${peut && html` <button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => retirer(i, j)}>retirer</button>`}`; })}</div>`}
+    </li>`)}</ul></div>`;
+}
+
 export function CarteRencontres({ ctx, c }) {
   const [dialogue, setDialogue] = useState(false);
   const [occupe, setOccupe] = useState(false);
@@ -209,6 +242,7 @@ export function CarteRencontres({ ctx, c }) {
     <p class="aide">${c.nb_simples != null || c.nb_doubles != null ? `Format : ${c.nb_simples ?? 0} simples et ${c.nb_doubles ?? 0} doubles par rencontre. ` : ''}Chaque match gagné compte pour la rencontre ; seuls les simples donnent des points (coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}), à la validation.</p>
     ${rencontres.length === 0 ? html`<p class="aide">Aucune rencontre.</p>` : html`<ul class="matchs">${rencontres.map((r) => html`<${Rencontre} key=${r.id} ctx=${ctx} c=${c} r=${r} peutSaisir=${peutSaisir} />`)}</ul>`}
     <${Classement} ctx=${ctx} c=${c} equipes=${equipes} rencontres=${rencontres} />
+    <${Effectifs} ctx=${ctx} c=${c} equipes=${equipes} peut=${ctx.estCadre} />
     <div class="actions">
       ${peutSaisir && html`<button class="btn btn-primaire" type="button" disabled=${equipes.length < 2} onClick=${() => setDialogue(true)}>Nouvelle rencontre</button>`}
       ${ctx.estCadre && aValider > 0 && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${valider}>Valider les matchs saisis (${aValider})</button>`}

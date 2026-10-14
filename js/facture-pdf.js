@@ -112,7 +112,7 @@ export async function telechargerFacture(ctx, facture) {
     return { nom: l ? nomComplet(l) : (j.nom_affiche || 'Joueur') };
   });
   // Une équipe est facturée au tarif d'une équipe : une seule ligne.
-  if (insc.type === 'equipe') joueurs = [{ nom: `équipe ${insc.nom_equipe || club.nom} (${joueurs.length} joueurs)` }];
+  if (insc.type === 'equipe') joueurs = [{ nom: `équipe ${insc.nom_equipe || club.nom}` }];
   const doc = await construireFacture({ facture, club, competition, joueurs, federation: ctx.federation });
   doc.save(`${facture.numero}.pdf`);
 }
