@@ -1,4 +1,4 @@
-# Diagnostic temporaire (relance 2) : ce que voit un serveur GitHub pour app.fttt.pf (à supprimer ensuite)
+# Diagnostic temporaire : contenu de la zone fttt.pf vue par un serveur GitHub (à supprimer ensuite)
 name: diag-dns
 on:
   push:
@@ -6,18 +6,19 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  pages: read
 jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Diagnostic
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Zone
         run: |
           sudo apt-get -qq update >/dev/null 2>&1; sudo apt-get -qq install -y dnsutils >/dev/null 2>&1
           n() { echo "::notice title=$1::$(echo "$2" | tr '\n' ' ' | sed 's/  */ /g' | cut -c1-900)"; }
-          n "nsc" "$(dig +time=5 +tries=2 +norec app.fttt.pf CNAME @nsc.n0c.com 2>&1 | grep -E 'status:|IN\s+CNAME|timed out')"
-          n "planethoster" "$(for s in nsa.planethoster.net nsb.planethoster.net; do dig +time=5 +tries=1 +norec app.fttt.pf CNAME @$s 2>&1 | grep -E 'status:|IN\s+(CNAME|SOA)|timed out|no servers'; done)"
-          n "api pages" "$(gh api repos/${{ github.repository }}/pages 2>&1 | head -c 800)"
-          n "api health" "$(gh api repos/${{ github.repository }}/pages/health 2>&1 | head -c 800)"
+          S=nsa.n0c.com
+          for name in app.fttt.pf _github-pages-challenge-ftttalize-debug.app.fttt.pf fttt.pf www.fttt.pf _dmarc.fttt.pf default._domainkey.fttt.pf brevo1._domainkey.fttt.pf brevo2._domainkey.fttt.pf mail.fttt.pf _acme-challenge.fttt.pf; do
+            for t in A AAAA CNAME TXT MX NS CAA; do
+              r=$(dig +time=5 +tries=2 +norec +short $name $t @$S 2>&1)
+              [ -n "$r" ] && n "$name $t" "$r"
+            done
+          done
+          n "fin" "termine"
