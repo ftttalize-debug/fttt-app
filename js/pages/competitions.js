@@ -10,6 +10,8 @@ import { CarteMatchs, CarteJuges } from './matchs.js';
 export const TYPES_COMP = { simple: 'Simple', double: 'Double', equipe: 'Par équipe' };
 const STATUTS = { brouillon: 'Brouillon', ouverte: 'Inscriptions ouvertes', cloturee: 'Inscriptions closes', terminee: 'Terminée' };
 const GENRE = { brouillon: 'neutre', ouverte: 'actif', cloturee: 'alerte', terminee: 'archive' };
+export const GENRES = { ouvert: 'Mixte (tous)', dames: 'Dames', messieurs: 'Messieurs', mixte: 'Mixte (1 fille + 1 garçon)', uni: 'Uni (2 filles ou 2 garçons)' };
+const CATEGORIES_MAX = { '': 'Aucune limite', U11: 'U11 et moins', U13: 'U13 et moins', U15: 'U15 et moins', U19: 'U19 et moins' };
 const COEFS = ['0.50', '0.75', '1.00', '1.25', '1.50'];
 export const fmtXpf = (n) => `${Number(n || 0).toLocaleString('fr-FR').replace(/ /g, ' ')} F`;
 const dates = (c) => (c.date_debut === c.date_fin ? fmtDate(c.date_debut) : `${fmtDate(c.date_debut)} – ${fmtDate(c.date_fin)}`);
@@ -36,6 +38,8 @@ export function PageCompetitions({ ctx, route }) {
           <span class="etiquettes">
             <${Pastille} genre=${GENRE[c.statut]}>${STATUTS[c.statut]}<//>
             <${Pastille}>${TYPES_COMP[c.type]}<//>
+            ${c.categorie_max && html`<${Pastille}>${c.categorie_max}<//>`}
+            ${c.genre && c.genre !== 'ouvert' && html`<${Pastille}>${GENRES[c.genre].split(' (')[0]}<//>`}
             <${Pastille}>Coef. ${Number(c.coefficient).toLocaleString('fr-FR')}<//>
           </span>
         </a>
@@ -46,17 +50,18 @@ export function PageCompetitions({ ctx, route }) {
 
 const vide = (ctx) => ({
   nom: '', saison_id: ctx.saison?.id || '', lieu: '', date_debut: '', date_fin: '', type: 'simple',
-  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false
+  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: ''
 });
 const depuis = (c) => ({
   nom: c.nom, saison_id: c.saison_id, lieu: c.lieu || '', date_debut: c.date_debut, date_fin: c.date_fin, type: c.type,
   coefficient: Number(c.coefficient).toFixed(2), montant_xpf: String(c.montant_xpf), date_limite_inscription: c.date_limite_inscription || '',
-  ouverte_a_tous: !!c.ouverte_a_tous
+  ouverte_a_tous: !!c.ouverte_a_tous, genre: c.genre || 'ouvert', categorie_max: c.categorie_max || ''
 });
 const norme = (f) => ({
   nom: f.nom.trim(), saison_id: f.saison_id, lieu: f.lieu.trim() || null, date_debut: f.date_debut, date_fin: f.date_fin || f.date_debut,
   type: f.type, coefficient: Number(f.coefficient), montant_xpf: parseInt(f.montant_xpf, 10),
-  date_limite_inscription: f.date_limite_inscription || null, ouverte_a_tous: !!f.ouverte_a_tous
+  date_limite_inscription: f.date_limite_inscription || null, ouverte_a_tous: !!f.ouverte_a_tous,
+  genre: f.genre, categorie_max: f.categorie_max || null
 });
 
 function valider(f) {
@@ -121,6 +126,14 @@ function Formulaire({ ctx, c }) {
         <select id="p-type" disabled=${dis} value=${f.type} onChange=${(e) => maj({ type: e.target.value })}>
           ${Object.entries(TYPES_COMP).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
         </select><//>
+      <${Champ} id="p-genre" libelle="Genre" aide="Dames ou Messieurs : réservé. Pour un double : Mixte = 1 fille + 1 garçon ; Uni = 2 filles ou 2 garçons.">
+        <select id="p-genre" disabled=${dis} value=${f.genre} onChange=${(e) => maj({ genre: e.target.value })}>
+          ${Object.entries(GENRES).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
+        </select><//>
+      <${Champ} id="p-cat" libelle="Catégorie maximale" aide="Les plus jeunes peuvent jouer au-dessus de leur catégorie (surclassement), jamais en dessous.">
+        <select id="p-cat" disabled=${dis} value=${f.categorie_max} onChange=${(e) => maj({ categorie_max: e.target.value })}>
+          ${Object.entries(CATEGORIES_MAX).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
+        </select><//>
       <${Champ} id="p-coef" libelle="Coefficient" aide="Multiplie les points gagnés ou perdus à chaque match.">
         <select id="p-coef" disabled=${dis} value=${f.coefficient} onChange=${(e) => maj({ coefficient: e.target.value })}>
           ${COEFS.map((k) => html`<option key=${k} value=${k}>${Number(k).toLocaleString('fr-FR')}</option>`)}
@@ -144,10 +157,13 @@ function Formulaire({ ctx, c }) {
 function Etat({ ctx, c }) {
   const [occupe, setOccupe] = useState(false);
   const [suppr, setSuppr] = useState(false);
+  const freres = c.evenement_id ? ctx.competitions.filter((x) => x.evenement_id === c.evenement_id && x.statut === c.statut) : [];
+  const [tous, setTous] = useState(true);
   async function changer(statut, message) {
     setOccupe(true);
     try {
-      await api.majCompetition(c.id, { statut });
+      if (freres.length > 1 && tous) await api.changerStatutEvenement(c.id, statut);
+      else await api.majCompetition(c.id, { statut });
       await ctx.recharger();
       toast(message);
     } catch (er) {
@@ -179,6 +195,10 @@ function Etat({ ctx, c }) {
       ${limitePassee && html`<p class="avis avis-alerte">La date limite est déjà passée : aucun club ne pourra s'inscrire.</p>`}`}
     ${c.statut === 'ouverte' && html`<p class="aide">Les responsables de club peuvent inscrire leurs joueurs${c.date_limite_inscription ? ` jusqu'au ${fmtDate(c.date_limite_inscription)}` : ''}.</p>`}
     ${c.statut === 'cloturee' && html`<p class="aide">Les inscriptions sont figées. Les juges-arbitres peuvent saisir les scores.</p>`}
+    ${freres.length > 1 && html`<div class="case">
+      <input id="p-tous-tableaux" type="checkbox" checked=${tous} onChange=${(e) => setTous(e.target.checked)} />
+      <label for="p-tous-tableaux">Appliquer à tous les tableaux de l'événement au même statut (${freres.length})</label>
+    </div>`}
     <div class="actions">
       ${c.statut === 'brouillon' && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => changer('ouverte', 'Inscriptions ouvertes.')}>Ouvrir les inscriptions</button>
         <button class="btn btn-danger" type="button" disabled=${occupe} onClick=${() => setSuppr(true)}>Supprimer</button>`}
@@ -196,6 +216,63 @@ function Etat({ ctx, c }) {
   </section>`;
 }
 
+const CATS_TABLEAUX = [['', 'Open'], ['U19', 'U19'], ['U15', 'U15'], ['U13', 'U13'], ['U11', 'U11']];
+const GENRES_SIMPLE = [['messieurs', 'Messieurs'], ['dames', 'Dames'], ['ouvert', 'Mixte']];
+const DOUBLES = [['messieurs', 'Double messieurs'], ['dames', 'Double dames'], ['mixte', 'Double mixte'], ['uni', 'Double uni']];
+
+function CarteTableaux({ ctx, c }) {
+  const [ouvert, setOuvert] = useState(false);
+  const [evt, setEvt] = useState(c.nom);
+  const [montant, setMontant] = useState(String(c.montant_xpf));
+  const [sel, setSel] = useState({});
+  const [occupe, setOccupe] = useState(false);
+  const freres = c.evenement_id ? ctx.competitions.filter((x) => x.evenement_id === c.evenement_id && x.id !== c.id) : [];
+  const bascule = (k) => setSel((s) => ({ ...s, [k]: !s[k] }));
+  const lignes = [];
+  for (const [cat, catLib] of CATS_TABLEAUX) for (const [g, gLib] of GENRES_SIMPLE) lignes.push({ k: `s|${cat}|${g}`, nom: `${evt.trim()} – Simple ${catLib} ${gLib}`, type: 'simple', genre: g, categorie_max: cat });
+  for (const [g, lib] of DOUBLES) lignes.push({ k: `d||${g}`, nom: `${evt.trim()} – ${lib}`, type: 'double', genre: g, categorie_max: '' });
+  const choisis = lignes.filter((l) => sel[l.k]);
+  async function creer() {
+    if (!/^\d+$/.test(montant.trim()) || !evt.trim()) { toast('Vérifie le nom et le montant.', 'erreur'); return; }
+    setOccupe(true);
+    try {
+      const n = await api.creerTableaux(c.id, choisis.map((l) => ({ nom: l.nom, type: l.type, genre: l.genre, categorie_max: l.categorie_max, montant_xpf: parseInt(montant, 10) })));
+      await ctx.recharger();
+      toast(`${n} tableau${n > 1 ? 'x créés' : ' créé'} en brouillon.`);
+      setOuvert(false);
+      setSel({});
+    } catch (er) {
+      toast(msgErreur(er), 'erreur');
+    } finally {
+      setOccupe(false);
+    }
+  }
+  return html`<section class="carte" aria-label="Tableaux">
+    <h2>Tableaux</h2>
+    <p class="aide">Pour un championnat avec plusieurs tableaux (U19, U15, doubles…), chaque tableau est une compétition à part avec ses inscriptions, sa facture et ses scores. Les dates, le lieu, le coefficient et les juges sont copiés depuis celle-ci.</p>
+    ${freres.length > 0 && html`<ul class="liste">${freres.map((x) => html`<li key=${x.id}><a class="ligne" style="display:flex" href=${lien(['competitions', x.id])}>
+      <span class="ligne-nom"><strong>${x.nom}</strong></span>
+      <span class="etiquettes"><${Pastille} genre=${GENRE[x.statut]}>${STATUTS[x.statut]}<//></span></a></li>`)}</ul>`}
+    ${ctx.estCadre && html`<div class="actions"><button class="btn btn-secondaire" type="button" onClick=${() => setOuvert(true)}>Ajouter des tableaux</button></div>`}
+    ${ouvert && html`<${Dialogue} titre="Ajouter des tableaux" onFermer=${() => setOuvert(false)}>
+      <${Champ} id="t-evt" libelle="Nom de l'événement"><input id="t-evt" type="text" value=${evt} onInput=${(e) => setEvt(e.target.value)} /><//>
+      <${Champ} id="t-montant" libelle="Montant par participant (F CFP)"><input id="t-montant" type="text" inputmode="numeric" value=${montant} onInput=${(e) => setMontant(e.target.value)} /><//>
+      <p><strong>Simples</strong></p>
+      ${CATS_TABLEAUX.map(([cat, catLib]) => html`<div key=${cat} class="puces" role="group" aria-label=${catLib}>
+        ${GENRES_SIMPLE.map(([g, gLib]) => { const k = `s|${cat}|${g}`; return html`<button key=${k} type="button" class="puce" aria-pressed=${!!sel[k]} onClick=${() => bascule(k)}>${catLib} ${gLib}</button>`; })}
+      </div>`)}
+      <p><strong>Doubles</strong></p>
+      <div class="puces" role="group" aria-label="Doubles">
+        ${DOUBLES.map(([g, lib]) => { const k = `d||${g}`; return html`<button key=${k} type="button" class="puce" aria-pressed=${!!sel[k]} onClick=${() => bascule(k)}>${lib}</button>`; })}
+      </div>
+      <p class="aide">Les tableaux par équipes se créent en choisissant le format « Par équipe » dans la fiche de la compétition. ${choisis.length} tableau${choisis.length > 1 ? 'x' : ''} choisi${choisis.length > 1 ? 's' : ''}.</p>
+      <div class="actions">
+        <button class="btn btn-primaire" type="button" disabled=${occupe || choisis.length === 0} onClick=${creer}>${occupe ? 'Création…' : 'Créer en brouillon'}</button>
+        <button class="btn btn-secondaire" type="button" onClick=${() => setOuvert(false)}>Annuler</button>
+      </div><//>`}
+  </section>`;
+}
+
 export function PageCompetition({ ctx, id }) {
   const c = id === 'nouveau' ? null : ctx.competitionParId.get(id);
   if (id !== 'nouveau' && !c) {
@@ -209,6 +286,7 @@ export function PageCompetition({ ctx, id }) {
     <div class="page-tete"><div><h1>${c ? c.nom : 'Nouvelle compétition'}</h1>
       ${c && html`<p>${dates(c)}${c.lieu ? ' · ' + c.lieu : ''} · ${TYPES_COMP[c.type]} · Coef. ${Number(c.coefficient).toLocaleString('fr-FR')} · ${fmtXpf(c.montant_xpf)} par participant</p>`}</div></div>
     ${c && ctx.estCadre && html`<${Etat} ctx=${ctx} c=${c} />`}
+    ${c && (ctx.estCadre || c.evenement_id) && html`<${CarteTableaux} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteInscriptions} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteMatchs} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteJuges} ctx=${ctx} c=${c} />`}
