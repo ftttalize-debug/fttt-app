@@ -1,0 +1,37 @@
+# Diagnostic temporaire : ce que voit un serveur GitHub pour app.fttt.pf (à supprimer ensuite)
+name: diag-dns
+on:
+  push:
+    paths: ['.github/workflows/diag-dns.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: read
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Outils
+        run: sudo apt-get -qq update >/dev/null && sudo apt-get -qq install -y dnsutils >/dev/null; dig -v
+      - name: Résolveur du runner
+        run: |
+          for t in CNAME A; do echo "== app.fttt.pf $t"; dig +time=5 +tries=2 app.fttt.pf $t; done
+          echo "== TXT défi"; dig +time=5 +tries=2 _github-pages-challenge-ftttalize-debug.app.fttt.pf TXT +short
+      - name: Serveurs du registre .pf
+        run: |
+          for s in ns1.mana.pf ns2.mana.pf ns03.pf; do echo "== $s"; dig +time=5 +tries=2 +norec fttt.pf NS @$s | grep -E "status|IN\s+NS|Query time" ; done
+      - name: Serveurs N0C (UDP puis TCP)
+        run: |
+          for s in nsa.n0c.com nsb.n0c.com nsc.n0c.com; do
+            echo "== $s UDP"; dig +time=5 +tries=2 +norec app.fttt.pf CNAME @$s | grep -E "status|CNAME|Query time|timed out"
+            echo "== $s TCP"; dig +tcp +time=5 +tries=2 +norec app.fttt.pf CNAME @$s | grep -E "status|CNAME|Query time|timed out"
+            echo "== $s TXT"; dig +time=5 +tries=2 +norec _github-pages-challenge-ftttalize-debug.app.fttt.pf TXT @$s +short
+          done
+      - name: Trace complète
+        run: dig +trace +time=5 app.fttt.pf CNAME || true
+      - name: API Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/pages || true
+          gh api repos/${{ github.repository }}/pages/health || true
