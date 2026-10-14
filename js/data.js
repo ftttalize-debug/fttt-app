@@ -27,6 +27,11 @@ async function toutLire(table, ordre) {
   return tout;
 }
 
+/** Lecture tolérante : la table peut ne pas exister avant l'exécution du script SQL correspondant. */
+async function lireSiPresente(table) {
+  try { return await toutLire(table, null); } catch { return []; }
+}
+
 export async function chargerTout() {
   const [saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, mouvements] = await Promise.all([
     toutLire('saisons', 'date_debut'),
@@ -44,12 +49,13 @@ export async function chargerTout() {
     toutLire('competition_juges', null),
     toutLire('mouvements_points', null)
   ]);
+  const [rencontres, compositions] = await Promise.all([lireSiPresente('rencontres'), lireSiPresente('composition_rencontre')]);
   let parametres = {};
   try {
     const { data, error } = await sb.from('parametres').select('*');
     if (!error && data) parametres = Object.fromEntries(data.map((r) => [r.cle, r.valeur]));
   } catch { /* table absente ou non autorisée : valeurs par défaut */ }
-  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, mouvements, parametres };
+  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, mouvements, rencontres, compositions, parametres };
 }
 
 /** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */
@@ -95,6 +101,16 @@ export const api = {
   saisirMatch: (a) =>
     appeler('saisir_match', {
       p_competition: a.competition, p_tour: a.tour || '', p_type: a.type, p_sets_gagnants: a.setsGagnants,
+      p_cote_a: a.coteA, p_cote_b: a.coteB, p_manches: a.manches, p_match: a.match || null
+    }),
+  creerRencontre: (competition, tour, date, equipeA, equipeB) =>
+    appeler('creer_rencontre', { p_competition: competition, p_tour: tour, p_date: date || null, p_equipe_a: equipeA, p_equipe_b: equipeB }),
+  supprimerRencontre: (id) => appeler('supprimer_rencontre', { p_rencontre: id }),
+  enregistrerComposition: (rencontre, inscription, joueurs) =>
+    appeler('enregistrer_composition', { p_rencontre: rencontre, p_inscription: inscription, p_joueurs: joueurs }),
+  saisirMatchRencontre: (a) =>
+    appeler('saisir_match_rencontre', {
+      p_rencontre: a.rencontre, p_type: a.type, p_sets_gagnants: a.setsGagnants,
       p_cote_a: a.coteA, p_cote_b: a.coteB, p_manches: a.manches, p_match: a.match || null
     }),
   supprimerMatch: (id) => appeler('supprimer_match', { p_match: id }),

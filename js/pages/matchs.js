@@ -29,9 +29,9 @@ const nomJ = (ctx, id) => { const l = ctx.licencieParId.get(id); return l ? nomC
 const cote = (ctx, liste) => liste.map((p) => nomJ(ctx, p.licencie_id)).join(' / ');
 const signe = (n) => (n > 0 ? '+' : '') + Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 
-function DialogueMatch({ ctx, c, match, onFermer }) {
+export function DialogueMatch({ ctx, c, match, rencontre, onFermer }) {
   const edition = !!match;
-  const [tour, setTour] = useState(match?.tour || '');
+  const [tour, setTour] = useState(rencontre?.tour || match?.tour || '');
   const [type, setType] = useState(match?.type_match || 'simple');
   const [n, setN] = useState(match?.sets_gagnants || 3);
   const nb = type === 'double' ? 2 : 1;
@@ -46,6 +46,8 @@ function DialogueMatch({ ctx, c, match, onFermer }) {
     return [...ids].map((id) => ctx.licencieParId.get(id)).filter(Boolean)
       .map((l) => ({ id: l.id, libelle: nomComplet(l), detail: l.clubNom, cle: norm(`${l.prenom} ${l.nom}`) }));
   }, [ctx.inscriptions, c.id]);
+  // Dans une rencontre : uniquement les joueurs alignés sur la feuille de chaque équipe
+  const options = (liste) => (liste ? joueurs.filter((o) => liste.includes(o.id)) : joueurs);
 
   const rempli = manches.filter((m) => m[0] !== '' || m[1] !== '');
   const analyse = analyserManches(rempli.length ? rempli : [], n);
@@ -62,10 +64,12 @@ function DialogueMatch({ ctx, c, match, onFermer }) {
   async function envoyer() {
     setOccupe(true);
     try {
-      await api.saisirMatch({
-        competition: c.id, tour, type, setsGagnants: n, coteA: A, coteB: B,
-        manches: rempli.map(([a, b]) => [Number(a), Number(b)]), match: match?.id
-      });
+      const manchesNum = rempli.map(([a, b]) => [Number(a), Number(b)]);
+      if (rencontre) {
+        await api.saisirMatchRencontre({ rencontre: rencontre.id, type, setsGagnants: n, coteA: A, coteB: B, manches: manchesNum, match: match?.id });
+      } else {
+        await api.saisirMatch({ competition: c.id, tour, type, setsGagnants: n, coteA: A, coteB: B, manches: manchesNum, match: match?.id });
+      }
       await ctx.recharger();
       toast(edition ? 'Match corrigé.' : 'Match enregistré.');
       onFermer();
@@ -75,15 +79,15 @@ function DialogueMatch({ ctx, c, match, onFermer }) {
     }
   }
 
-  const champsJoueurs = (label, cotes, setCotes, prefixe) => html`<div class="grille">
+  const champsJoueurs = (label, cotes, setCotes, prefixe, liste) => html`<div class="grille">
     ${Array.from({ length: nb }, (_, i) => html`<${Champ} key=${prefixe + i} id=${`m-${prefixe}${i}`} libelle=${nb > 1 ? `${label} ${i + 1}` : label}>
-      <${ChoixPersonne} id=${`m-${prefixe}${i}`} options=${joueurs.filter((o) => !pris.includes(o.id) || cotes[i] === o.id)} valeur=${cotes[i]} onChange=${place(cotes, setCotes, i)} /><//>`)}
+      <${ChoixPersonne} id=${`m-${prefixe}${i}`} options=${options(liste).filter((o) => !pris.includes(o.id) || cotes[i] === o.id)} valeur=${cotes[i]} onChange=${place(cotes, setCotes, i)} /><//>`)}
   </div>`;
 
   return html`<${Dialogue} titre=${edition ? 'Corriger le match' : 'Saisir un match'} onFermer=${onFermer}>
     <div class="grille grille-2">
       <${Champ} id="m-tour" libelle="Tour">
-        <input id="m-tour" list="m-tours" type="text" value=${tour} onInput=${(e) => setTour(e.target.value)} />
+        <input id="m-tour" list="m-tours" type="text" disabled=${!!rencontre} value=${tour} onInput=${(e) => setTour(e.target.value)} />
         <datalist id="m-tours">${TOURS.map((t) => html`<option key=${t} value=${t}></option>`)}</datalist><//>
       <${Champ} id="m-type" libelle="Type">
         <select id="m-type" value=${type} disabled=${edition} onChange=${(e) => changerType(e.target.value)}>
@@ -94,8 +98,8 @@ function DialogueMatch({ ctx, c, match, onFermer }) {
         ${[3, 4].map((v) => html`<button key=${v} type="button" class="puce" aria-pressed=${n === v}
           onClick=${() => { setN(v); setManches((ms) => ms.slice(0, 2 * v - 1)); }}>${v} sets gagnants</button>`)}
       </div></div>
-    ${champsJoueurs(nb > 1 ? 'Paire A' : 'Joueur A', A, setA, 'a')}
-    ${champsJoueurs(nb > 1 ? 'Paire B' : 'Joueur B', B, setB, 'b')}
+    ${champsJoueurs(rencontre ? (nb > 1 ? 'Paire ' : 'Joueur ') + rencontre.nomA : (nb > 1 ? 'Paire A' : 'Joueur A'), A, setA, 'a', rencontre?.listeA)}
+    ${champsJoueurs(rencontre ? (nb > 1 ? 'Paire ' : 'Joueur ') + rencontre.nomB : (nb > 1 ? 'Paire B' : 'Joueur B'), B, setB, 'b', rencontre?.listeB)}
     <div class="champ"><span class="etiquette">Score de chaque manche</span>
       <ul class="manches-saisie">
         ${manches.map((m, i) => html`<li key=${i}><span>Manche ${i + 1}</span>
@@ -115,7 +119,7 @@ function DialogueMatch({ ctx, c, match, onFermer }) {
   <//>`;
 }
 
-function LigneMatch({ ctx, c, m, peutSaisir, onEdit }) {
+export function LigneMatch({ ctx, c, m, peutSaisir, onEdit }) {
   const [occupe, setOccupe] = useState(false);
   async function act(fn, message) {
     setOccupe(true);

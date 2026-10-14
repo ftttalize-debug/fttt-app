@@ -6,6 +6,7 @@ import { Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { CarteInscriptions } from './inscriptions.js';
 import { CarteFacturation } from './factures.js';
 import { CarteMatchs, CarteJuges } from './matchs.js';
+import { CarteRencontres } from './rencontres.js';
 
 export const TYPES_COMP = { simple: 'Simple', double: 'Double', equipe: 'Par équipe' };
 const STATUTS = { brouillon: 'Brouillon', ouverte: 'Inscriptions ouvertes', cloturee: 'Inscriptions closes', terminee: 'Terminée' };
@@ -51,19 +52,22 @@ export function PageCompetitions({ ctx, route }) {
 
 const vide = (ctx) => ({
   nom: '', saison_id: ctx.saison?.id || '', lieu: '', date_debut: '', date_fin: '', type: 'simple',
-  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: '', categorie_min: ''
+  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: '', categorie_min: '', nb_simples: '', nb_doubles: ''
 });
 const depuis = (c) => ({
   nom: c.nom, saison_id: c.saison_id, lieu: c.lieu || '', date_debut: c.date_debut, date_fin: c.date_fin, type: c.type,
   coefficient: Number(c.coefficient).toFixed(2), montant_xpf: String(c.montant_xpf), date_limite_inscription: c.date_limite_inscription || '',
-  ouverte_a_tous: !!c.ouverte_a_tous, genre: c.genre || 'ouvert', categorie_max: c.categorie_max || '', categorie_min: c.categorie_min || ''
+  ouverte_a_tous: !!c.ouverte_a_tous, genre: c.genre || 'ouvert', categorie_max: c.categorie_max || '', categorie_min: c.categorie_min || '',
+  nb_simples: c.nb_simples == null ? '' : String(c.nb_simples), nb_doubles: c.nb_doubles == null ? '' : String(c.nb_doubles)
 });
 const norme = (f) => ({
   nom: f.nom.trim(), saison_id: f.saison_id, lieu: f.lieu.trim() || null, date_debut: f.date_debut, date_fin: f.date_fin || f.date_debut,
   type: f.type, coefficient: Number(f.coefficient), montant_xpf: parseInt(f.montant_xpf, 10),
   date_limite_inscription: f.date_limite_inscription || null, ouverte_a_tous: !!f.ouverte_a_tous,
   // Envoyés seulement s'ils sont renseignés : le site reste utilisable avant le script 026.
-  ...(f.genre !== 'ouvert' ? { genre: f.genre } : {}), ...(f.categorie_max ? { categorie_max: f.categorie_max } : {}), ...(f.categorie_min ? { categorie_min: f.categorie_min } : {})
+  ...(f.genre !== 'ouvert' ? { genre: f.genre } : {}), ...(f.categorie_max ? { categorie_max: f.categorie_max } : {}), ...(f.categorie_min ? { categorie_min: f.categorie_min } : {}),
+  ...(f.type === 'equipe' && /^\d+$/.test(f.nb_simples) ? { nb_simples: parseInt(f.nb_simples, 10) } : {}),
+  ...(f.type === 'equipe' && /^\d+$/.test(f.nb_doubles) ? { nb_doubles: parseInt(f.nb_doubles, 10) } : {})
 });
 
 function valider(f) {
@@ -128,6 +132,8 @@ function Formulaire({ ctx, c }) {
         <select id="p-type" disabled=${dis} value=${f.type} onChange=${(e) => maj({ type: e.target.value, ...(e.target.value !== 'double' && (f.genre === 'mixte' || f.genre === 'uni') ? { genre: 'ouvert' } : {}) })}>
           ${Object.entries(TYPES_COMP).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
         </select><//>
+      ${f.type === 'equipe' && html`<${Champ} id="p-nbs" libelle="Simples par rencontre" aide="Format fixé en début de saison (ex. 16 en D1, 9 en D2)."><input id="p-nbs" type="text" inputmode="numeric" disabled=${dis} value=${f.nb_simples} onInput=${(e) => maj({ nb_simples: e.target.value })} /><//>
+      <${Champ} id="p-nbd" libelle="Doubles par rencontre" aide="Ex. 2 en D1, 1 en D2."><input id="p-nbd" type="text" inputmode="numeric" disabled=${dis} value=${f.nb_doubles} onInput=${(e) => maj({ nb_doubles: e.target.value })} /><//>`}
       <${Champ} id="p-genre" libelle="Genre" aide=${f.type === 'double' ? 'Mixte = 1 fille + 1 garçon ; Uni = 2 filles ou 2 garçons.' : 'Dames ou Messieurs : tableau réservé.'}>
         <select id="p-genre" disabled=${dis} value=${f.genre} onChange=${(e) => maj({ genre: e.target.value })}>
           ${Object.entries(GENRES).filter(([k]) => f.type === 'double' || (k !== 'mixte' && k !== 'uni')).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
@@ -291,7 +297,8 @@ export function PageCompetition({ ctx, id }) {
     ${c && ctx.estCadre && html`<${Etat} ctx=${ctx} c=${c} />`}
     ${c && (ctx.estCadre || c.evenement_id) && html`<${CarteTableaux} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteInscriptions} ctx=${ctx} c=${c} />`}
-    ${c && html`<${CarteMatchs} ctx=${ctx} c=${c} />`}
+    ${c && c.type !== 'equipe' && html`<${CarteMatchs} ctx=${ctx} c=${c} />`}
+    ${c && c.type === 'equipe' && html`<${CarteRencontres} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteJuges} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteFacturation} ctx=${ctx} c=${c} />`}
     <${Formulaire} ctx=${ctx} c=${c} />
