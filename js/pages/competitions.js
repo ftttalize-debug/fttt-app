@@ -6,7 +6,7 @@ import { Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { CarteInscriptions } from './inscriptions.js';
 import { CarteFacturation } from './factures.js';
 import { CarteMatchs, CarteJuges } from './matchs.js';
-import { CarteRencontres } from './rencontres.js';
+import { CarteRencontres, CarteTours } from './rencontres.js';
 
 export const TYPES_COMP = { simple: 'Simple', double: 'Double', equipe: 'Par équipe' };
 const STATUTS = { brouillon: 'Brouillon', ouverte: 'Inscriptions ouvertes', cloturee: 'Inscriptions closes', terminee: 'Terminée' };
@@ -298,6 +298,7 @@ export function PageCompetition({ ctx, id }) {
     ${c && (ctx.estCadre || c.evenement_id) && html`<${CarteTableaux} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteInscriptions} ctx=${ctx} c=${c} />`}
     ${c && c.type !== 'equipe' && html`<${CarteMatchs} ctx=${ctx} c=${c} />`}
+    ${c && c.type === 'equipe' && html`<${CarteTours} ctx=${ctx} c=${c} />`}
     ${c && c.type === 'equipe' && html`<${CarteRencontres} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteJuges} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteFacturation} ctx=${ctx} c=${c} />`}

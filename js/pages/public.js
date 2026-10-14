@@ -135,17 +135,71 @@ function Resultats({ initial }) {
   </div>`;
 }
 
+/** Résultats d'une compétition par équipes : rencontres par tour (avec date) et classement des équipes. */
+function ResultatsEquipes({ competition }) {
+  const [rencontres, setRencontres] = useState(null);
+  const [erreur, setErreur] = useState('');
+  useEffect(() => {
+    setRencontres(null);
+    api.rencontresPubliques(competition).then(setRencontres).catch((e) => setErreur(msgErreur(e)));
+  }, [competition]);
+  const { tours, classement } = useMemo(() => {
+    const t = new Map();
+    const eq = new Map();
+    const get = (nom) => { if (!eq.has(nom)) eq.set(nom, { nom, j: 0, v: 0, n: 0, d: 0, pour: 0, contre: 0 }); return eq.get(nom); };
+    (rencontres || []).forEach((r) => {
+      const cle = `${r.date_rencontre || ''}|${r.tour}`;
+      if (!t.has(cle)) t.set(cle, { tour: r.tour, date: r.date_rencontre, liste: [] });
+      t.get(cle).liste.push(r);
+      if (r.matchs.length === 0) return;
+      const A = get(r.equipe_a), B = get(r.equipe_b);
+      A.j += 1; B.j += 1; A.pour += r.score_a; A.contre += r.score_b; B.pour += r.score_b; B.contre += r.score_a;
+      if (r.score_a > r.score_b) { A.v += 1; B.d += 1; } else if (r.score_b > r.score_a) { B.v += 1; A.d += 1; } else { A.n += 1; B.n += 1; }
+    });
+    return {
+      tours: [...t.values()],
+      classement: [...eq.values()].sort((x, y) => (y.v + y.n / 2) - (x.v + x.n / 2) || (y.pour - y.contre) - (x.pour - x.contre) || x.nom.localeCompare(y.nom))
+    };
+  }, [rencontres]);
+  if (erreur) return html`<p class="erreur" role="alert">${erreur}</p>`;
+  if (rencontres === null) return html`<${Chargement} />`;
+  if (!rencontres.length) return html`<p class="vide">Aucune rencontre pour cette compétition.</p>`;
+  return html`<div>
+    ${classement.length > 0 && html`<section class="carte"><h2>Classement des équipes</h2>
+      <ul class="historique">${classement.map((x, k) => html`<li key=${x.nom}><span style="flex:1"><strong>${k + 1}. ${x.nom}</strong>
+        <small> ${x.j} rencontre${x.j > 1 ? 's' : ''} · ${x.v} V · ${x.n} N · ${x.d} D · matchs ${x.pour}-${x.contre}</small></span></li>`)}</ul></section>`}
+    ${tours.map((t) => html`<section class="carte" key=${t.tour + t.date}>
+      <h2>${t.tour}${t.date ? ' · ' + new Date(t.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</h2>
+      <ul class="matchs">${t.liste.map((r) => html`<li class="match" key=${r.rencontre_id}>
+        <div class="match-score">
+          <span class=${r.score_a > r.score_b ? 'gagnant' : ''}>${r.equipe_a}</span>
+          <strong>${r.matchs.length ? `${r.score_a} - ${r.score_b}` : 'à jouer'}</strong>
+          <span class=${r.score_b > r.score_a ? 'gagnant' : ''}>${r.equipe_b}</span></div>
+        ${r.matchs.length > 0 && html`<details><summary>Détail des matchs (${r.matchs.length})</summary>
+          <ul class="matchs">${r.matchs.map((m, i) => html`<li class="match" key=${i}>
+            <div class="match-tete"><strong>${m.type === 'double' ? 'Double' : 'Simple'}</strong></div>
+            <div class="match-score">
+              <span class=${m.sets_a > m.sets_b ? 'gagnant' : ''}><${Noms} r=${{ liste: m.a }} /></span>
+              <strong>${m.sets_a} - ${m.sets_b}</strong>
+              <span class=${m.sets_b > m.sets_a ? 'gagnant' : ''}><${Noms} r=${{ liste: m.b }} /></span></div>
+            <small>${m.manches}</small></li>`)}</ul></details>`}
+      </li>`)}</ul></section>`)}
+  </div>`;
+}
+
 function ResultatsCompetition({ initial }) {
   const [comps, setComps] = useState(null);
   const [choix, setChoix] = useState('');
   const [lignes, setLignes] = useState(null);
   const [erreur, setErreur] = useState('');
   useEffect(() => { api.competitionsPubliques().then((c) => { setComps(c); setChoix(c.some((x) => x.id === initial) ? initial : c[0]?.id || ''); }).catch((e) => setErreur(msgErreur(e))); }, []);
+  const compChoisie = comps?.find((c) => c.id === choix);
+  const parEquipes = compChoisie?.type === 'equipe';
   useEffect(() => {
-    if (!choix) { setLignes([]); return; }
+    if (!choix || parEquipes) { setLignes([]); return; }
     setLignes(null);
     api.resultatsPublics(choix).then(setLignes).catch((e) => setErreur(msgErreur(e)));
-  }, [choix]);
+  }, [choix, parEquipes]);
   const matchs = useMemo(() => {
     const m = new Map();
     (lignes || []).forEach((r) => {
@@ -166,8 +220,9 @@ function ResultatsCompetition({ initial }) {
   return html`<div class="page-corps">
     <section class="carte filtres"><select aria-label="Compétition" value=${choix} onChange=${(e) => setChoix(e.target.value)}>
       ${comps.map((c) => html`<option key=${c.id} value=${c.id}>${c.nom} · ${new Date(c.date_debut + 'T12:00:00').toLocaleDateString('fr-FR')}</option>`)}</select></section>
-    ${matchs.length > 0 && html`<p><button class="btn btn-secondaire" type="button" id="exp-resultats" onClick=${exporter}>Exporter (CSV)</button></p>`}
-    ${lignes === null ? html`<${Chargement} />` : matchs.length === 0 ? html`<p class="vide">Aucun résultat validé pour cette compétition.</p>` : html`<ul class="matchs">
+    ${parEquipes && html`<${ResultatsEquipes} competition=${choix} />`}
+    ${!parEquipes && matchs.length > 0 && html`<p><button class="btn btn-secondaire" type="button" id="exp-resultats" onClick=${exporter}>Exporter (CSV)</button></p>`}
+    ${parEquipes ? null : lignes === null ? html`<${Chargement} />` : matchs.length === 0 ? html`<p class="vide">Aucun résultat validé pour cette compétition.</p>` : html`<ul class="matchs">
       ${matchs.map((x) => html`<li class="match" key=${x.id}>
         <div class="match-tete"><strong>${x.tour || 'Match'}</strong>${x.double ? html`<span class="pastille">Double</span>` : ''}</div>
         <div class="match-score">

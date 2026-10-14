@@ -49,13 +49,13 @@ export async function chargerTout() {
     toutLire('competition_juges', null),
     toutLire('mouvements_points', null)
   ]);
-  const [rencontres, compositions] = await Promise.all([lireSiPresente('rencontres'), lireSiPresente('composition_rencontre')]);
+  const [rencontres, compositions, tours] = await Promise.all([lireSiPresente('rencontres'), lireSiPresente('composition_rencontre'), lireSiPresente('tours_competition')]);
   let parametres = {};
   try {
     const { data, error } = await sb.from('parametres').select('*');
     if (!error && data) parametres = Object.fromEntries(data.map((r) => [r.cle, r.valeur]));
   } catch { /* table absente ou non autorisée : valeurs par défaut */ }
-  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, mouvements, rencontres, compositions, parametres };
+  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, mouvements, rencontres, compositions, tours, parametres };
 }
 
 /** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */
@@ -105,6 +105,10 @@ export const api = {
     }),
   creerRencontre: (competition, tour, date, equipeA, equipeB) =>
     appeler('creer_rencontre', { p_competition: competition, p_tour: tour, p_date: date || null, p_equipe_a: equipeA, p_equipe_b: equipeB }),
+  creerTour: (competition, nom, date) => appeler('creer_tour', { p_competition: competition, p_nom: nom, p_date: date }),
+  modifierTour: (id, nom, date) => appeler('modifier_tour', { p_tour: id, p_nom: nom, p_date: date }),
+  supprimerTour: (id) => appeler('supprimer_tour', { p_tour: id }),
+  rencontresPubliques: (competition) => appeler('rencontres_publiques', { p_competition: competition }),
   supprimerRencontre: (id) => appeler('supprimer_rencontre', { p_rencontre: id }),
   enregistrerComposition: (rencontre, inscription, joueurs) =>
     appeler('enregistrer_composition', { p_rencontre: rencontre, p_inscription: inscription, p_joueurs: joueurs }),

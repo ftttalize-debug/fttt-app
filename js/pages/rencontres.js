@@ -7,6 +7,8 @@ import { DialogueMatch, LigneMatch } from './matchs.js';
 
 const TOURS = ['Journée 1', 'Journée 2', 'Journée 3', 'Journée 4', 'Journée 5', 'Journée 6', 'Demi-finale', 'Finale'];
 
+const toursDe = (ctx, c) => (ctx.tours || []).filter((t) => t.competition_id === c.id).slice().sort((a, b) => a.date_tour.localeCompare(b.date_tour) || a.nom.localeCompare(b.nom, 'fr', { numeric: true }));
+
 const nomEquipe = (ctx, i) => (i ? i.nom_equipe || ctx.clubParId.get(i.club_id)?.nom || 'Équipe' : '—');
 
 /** Score d'une rencontre : nombre de matchs gagnés par chaque équipe (les doubles comptent, sans points). */
@@ -18,15 +20,16 @@ function scoreRencontre(ctx, r) {
 }
 
 function DialogueRencontre({ ctx, c, equipes, onFermer }) {
-  const [tour, setTour] = useState('');
-  const [date, setDate] = useState('');
+  const tours = toursDe(ctx, c);
+  const [tour, setTour] = useState(tours[0]?.nom || '');
+  const date = tours.find((t) => t.nom === tour)?.date_tour || '';
   const [ea, setEa] = useState(equipes[0]?.id || '');
   const [eb, setEb] = useState(equipes[1]?.id || '');
   const [occupe, setOccupe] = useState(false);
   async function creer() {
     setOccupe(true);
     try {
-      await api.creerRencontre(c.id, tour.trim(), date, ea, eb);
+      await api.creerRencontre(c.id, tour, date, ea, eb);
       await ctx.recharger();
       toast('Rencontre créée.');
       onFermer();
@@ -36,14 +39,14 @@ function DialogueRencontre({ ctx, c, equipes, onFermer }) {
     ${equipes.map((i) => html`<option key=${i.id} value=${i.id}>${nomEquipe(ctx, i)}</option>`)}</select>`;
   return html`<${Dialogue} titre="Nouvelle rencontre" onFermer=${onFermer}>
     <div class="grille grille-2">
-      <${Champ} id="r-tour" libelle="Tour"><input id="r-tour" list="r-tours" type="text" value=${tour} onInput=${(e) => setTour(e.target.value)} />
-        <datalist id="r-tours">${TOURS.map((t) => html`<option key=${t} value=${t}></option>`)}</datalist><//>
-      <${Champ} id="r-date" libelle="Date"><input id="r-date" type="date" value=${date} onInput=${(e) => setDate(e.target.value)} /><//>
+      <${Champ} id="r-tour" libelle="Tour" aide=${tours.length ? '' : 'Crée d\'abord les tours dans « Tours et dates ».'}>
+        <select id="r-tour" value=${tour} onChange=${(e) => setTour(e.target.value)}>
+          ${tours.map((t) => html`<option key=${t.id} value=${t.nom}>${t.nom} · ${fmtDate(t.date_tour)}</option>`)}</select><//>
       <${Champ} id="r-a" libelle="Équipe A">${select('r-a', ea, setEa)}<//>
       <${Champ} id="r-b" libelle="Équipe B">${select('r-b', eb, setEb)}<//>
     </div>
     <div class="actions">
-      <button class="btn btn-primaire" type="button" disabled=${occupe || !tour.trim() || !ea || !eb || ea === eb} onClick=${creer}>${occupe ? 'Création…' : 'Créer'}</button>
+      <button class="btn btn-primaire" type="button" disabled=${occupe || !tour || !ea || !eb || ea === eb} onClick=${creer}>${occupe ? 'Création…' : 'Créer'}</button>
       <button class="btn btn-secondaire" type="button" onClick=${onFermer}>Annuler</button>
     </div><//>`;
 }
@@ -142,6 +145,45 @@ function Classement({ ctx, c, equipes, rencontres }) {
       <small> ${x.j} rencontre${x.j > 1 ? 's' : ''} · ${x.v} V · ${x.n} N · ${x.d} D · matchs ${x.pour}-${x.contre}</small></span></li>`)}</ul></div>`;
 }
 
+/** Tours de la compétition par équipes, chacun avec sa date. */
+export function CarteTours({ ctx, c }) {
+  const [dialogue, setDialogue] = useState(null); // { tour } pour modifier, {} pour ajouter
+  const [nom, setNom] = useState('');
+  const [date, setDate] = useState('');
+  const [occupe, setOccupe] = useState(false);
+  const estJuge = ctx.moi && ctx.juges.some((j) => j.competition_id === c.id && j.licencie_id === ctx.moi.id);
+  const peut = ctx.estCadre || (estJuge && c.statut === 'cloturee');
+  const tours = toursDe(ctx, c);
+  if (!peut && tours.length === 0) return null;
+  const ouvrir = (t) => { setNom(t?.nom || ''); setDate(t?.date_tour || ''); setDialogue({ tour: t }); };
+  async function agir(fn, message) {
+    setOccupe(true);
+    try { await fn(); await ctx.recharger(); toast(message); setDialogue(null); } catch (er) { toast(msgErreur(er), 'erreur'); } finally { setOccupe(false); }
+  }
+  const enregistrer = () => (dialogue.tour
+    ? agir(() => api.modifierTour(dialogue.tour.id, nom.trim(), date), 'Tour modifié.')
+    : agir(() => api.creerTour(c.id, nom.trim(), date), 'Tour ajouté.'));
+  const nbRencontres = (t) => ctx.rencontres.filter((r) => r.competition_id === c.id && r.tour === t.nom).length;
+  return html`<section class="carte" aria-label="Tours et dates">
+    <h2>Tours et dates</h2>
+    <p class="aide">Une compétition par équipes se joue en plusieurs tours, chacun à sa date (du ${fmtDate(c.date_debut)} au ${fmtDate(c.date_fin)}). Les rencontres se rattachent à un tour.</p>
+    ${tours.length === 0 ? html`<p class="aide">Aucun tour défini.</p>` : html`<ul class="historique">${tours.map((t) => html`<li key=${t.id}>
+      <span style="flex:1"><strong>${t.nom}</strong> · ${fmtDate(t.date_tour)}<small> ${nbRencontres(t)} rencontre${nbRencontres(t) > 1 ? 's' : ''}</small></span>
+      ${peut && html`<span class="etiquettes"><button class="btn btn-lien" type="button" onClick=${() => ouvrir(t)}>Modifier</button>
+        ${nbRencontres(t) === 0 && html`<button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => agir(() => api.supprimerTour(t.id), 'Tour supprimé.')}>Supprimer</button>`}</span>`}
+    </li>`)}</ul>`}
+    ${peut && html`<div class="actions"><button class="btn btn-secondaire" type="button" onClick=${() => ouvrir(null)}>Ajouter un tour</button></div>`}
+    ${dialogue && html`<${Dialogue} titre=${dialogue.tour ? 'Modifier le tour' : 'Ajouter un tour'} onFermer=${() => setDialogue(null)}>
+      <${Champ} id="t-nom" libelle="Nom du tour"><input id="t-nom" list="t-noms" type="text" value=${nom} onInput=${(e) => setNom(e.target.value)} />
+        <datalist id="t-noms">${TOURS.map((t) => html`<option key=${t} value=${t}></option>`)}</datalist><//>
+      <${Champ} id="t-date" libelle="Date" aide="Comprise entre le début et la fin de la compétition."><input id="t-date" type="date" value=${date} min=${c.date_debut} max=${c.date_fin} onInput=${(e) => setDate(e.target.value)} /><//>
+      <div class="actions">
+        <button class="btn btn-primaire" type="button" disabled=${occupe || !nom.trim() || !date} onClick=${enregistrer}>${occupe ? 'Enregistrement…' : 'Enregistrer'}</button>
+        <button class="btn btn-secondaire" type="button" onClick=${() => setDialogue(null)}>Annuler</button>
+      </div><//>`}
+  </section>`;
+}
+
 export function CarteRencontres({ ctx, c }) {
   const [dialogue, setDialogue] = useState(false);
   const [occupe, setOccupe] = useState(false);
@@ -150,7 +192,7 @@ export function CarteRencontres({ ctx, c }) {
   const peutSaisir = ctx.estCadre ? true : estJuge && c.statut === 'cloturee';
   const equipes = ctx.inscriptions.filter((i) => i.competition_id === c.id && i.statut === 'active' && i.type === 'equipe');
   const rencontres = ctx.rencontres.filter((r) => r.competition_id === c.id)
-    .slice().sort((a, b) => a.tour.localeCompare(b.tour, 'fr', { numeric: true }) || String(a.date_rencontre).localeCompare(String(b.date_rencontre)));
+    .slice().sort((a, b) => String(a.date_rencontre).localeCompare(String(b.date_rencontre)) || a.tour.localeCompare(b.tour, 'fr', { numeric: true }));
   const aValider = ctx.matchs.filter((m) => m.competition_id === c.id && m.statut === 'saisi').length;
   if (!peutSaisir && rencontres.length === 0) return null;
   async function valider() {
@@ -163,6 +205,7 @@ export function CarteRencontres({ ctx, c }) {
   }
   return html`<section class="carte" aria-label="Rencontres">
     <h2>Rencontres par équipes</h2>
+    ${toursDe(ctx, c).length === 0 && peutSaisir && html`<p class="avis">Définis d'abord les tours et leurs dates dans « Tours et dates ».</p>`}
     <p class="aide">${c.nb_simples != null || c.nb_doubles != null ? `Format : ${c.nb_simples ?? 0} simples et ${c.nb_doubles ?? 0} doubles par rencontre. ` : ''}Chaque match gagné compte pour la rencontre ; seuls les simples donnent des points (coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}), à la validation.</p>
     ${rencontres.length === 0 ? html`<p class="aide">Aucune rencontre.</p>` : html`<ul class="matchs">${rencontres.map((r) => html`<${Rencontre} key=${r.id} ctx=${ctx} c=${c} r=${r} peutSaisir=${peutSaisir} />`)}</ul>`}
     <${Classement} ctx=${ctx} c=${c} equipes=${equipes} rencontres=${rencontres} />
