@@ -268,12 +268,66 @@ export function BoutonInstaller() {
   </div>`;
 }
 
+const cleBinaire = (b64) => {
+  const t = (b64 + '='.repeat((4 - (b64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
+};
+
+/** Alerte générale : rappel J-3 / J-1 avant la date limite d'inscription (sans compte). */
+export function BoutonAlertes() {
+  const [etat, setEtat] = useState('chargement'); // chargement | indispo | pret | actif | refuse | ios
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    (async () => {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        setEtat(/iphone|ipad|ipod/i.test(navigator.userAgent) ? 'ios' : 'indispo'); return;
+      }
+      try {
+        await api.clePublicPush();
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        setEtat(Notification.permission === 'denied' ? 'refuse' : sub ? 'actif' : 'pret');
+      } catch (e) { setEtat('indispo'); }
+    })();
+  }, []);
+  async function activer() {
+    setMsg('');
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { setEtat(perm === 'denied' ? 'refuse' : 'pret'); return; }
+      const cle = await api.clePublicPush();
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cleBinaire(cle) });
+      const j = sub.toJSON();
+      await api.abonnerPush(j.endpoint, j.keys.p256dh, j.keys.auth);
+      setEtat('actif');
+    } catch (e) { setMsg('Impossible d\'activer les alertes : ' + msgErreur(e)); }
+  }
+  async function couper() {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) { await api.desabonnerPush(sub.endpoint).catch(() => {}); await sub.unsubscribe(); }
+      setEtat('pret');
+    } catch (e) { setMsg(msgErreur(e)); }
+  }
+  if (etat === 'chargement' || etat === 'indispo') return null;
+  return html`<div class="installer">
+    ${etat === 'pret' && html`<button class="btn btn-secondaire" type="button" id="btn-alertes" onClick=${activer}>Activer les alertes d'inscription</button>`}
+    ${etat === 'actif' && html`<p class="aide">Alertes d'inscription activées (rappels 3 jours et 1 jour avant la date limite). <button class="btn btn-lien" type="button" onClick=${couper}>Désactiver</button></p>`}
+    ${etat === 'refuse' && html`<p class="aide">Les notifications sont bloquées pour ce site : autorisez-les dans les réglages du navigateur pour recevoir les alertes.</p>`}
+    ${etat === 'ios' && html`<p class="aide">Pour recevoir les alertes sur iPhone, installez d'abord l'application (Partager, puis « Sur l'écran d'accueil »), puis ouvrez-la depuis l'écran d'accueil.</p>`}
+    ${msg && html`<p class="aide">${msg}</p>`}
+  </div>`;
+}
+
 export function PagePublique({ route, connecte }) {
   const onglet = route.parts[0] === 'resultats' ? 'resultats' : 'classement';
   return html`<div class="page">
     <div class="page-tete"><div><h1>${onglet === 'classement' ? 'Classement' : 'Résultats'}</h1><p>Fédération Tahitienne de Tennis de Table</p></div></div>
     <${OngletsPublics} actif=${onglet} />
     <${BoutonInstaller} />
+    <${BoutonAlertes} />
     ${onglet === 'classement' ? html`<${Classement} />` : html`<${Resultats} initial=${route.query?.competition} />`}
   </div>`;
 }

@@ -15,3 +15,20 @@ self.addEventListener('fetch', e => {
     return res;
   }).catch(() => caches.match(r).then(m => m || caches.match('/index.html'))));
 });
+
+// Notifications push : alerte générale de rappel d'inscription.
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) {}
+  e.waitUntil(self.registration.showNotification(d.titre || 'FTTT', {
+    body: d.texte || '', icon: 'assets/icon-192.png', data: { url: d.url || '/' }
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+    for (const c of cs) { if ('focus' in c) { c.navigate(url).catch(() => {}); return c.focus(); } }
+    return self.clients.openWindow(url);
+  }));
+});
