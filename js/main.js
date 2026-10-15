@@ -15,7 +15,8 @@ import { PagePublique } from './pages/public.js';
 import { PageSimulateur } from './pages/simulateur.js';
 import { PageCalendrier } from './pages/calendrier.js';
 import { PageSinscrire } from './pages/sinscrire.js';
-import { PageMonProfil, lireSouvenir } from './pages/monprofil.js';
+import { PageMonProfil } from './pages/monprofil.js';
+import { lireIdentite } from './identite.js';
 import { PageJoueur } from './pages/joueur.js';
 import { PagePoints } from './pages/points.js';
 import { PageComptes } from './pages/comptes.js';
@@ -163,7 +164,7 @@ function App() {
     if (p0 !== 'connexion') {
       const page = p0 === 'calendrier' ? html`<${PageCalendrier} />`
         : p0 === 'sinscrire' ? html`<${PageSinscrire} />`
-        : p0 === 'monprofil' || (!p0 && lireSouvenir()) ? html`<${PageMonProfil} />`
+        : p0 === 'monprofil' || (!p0 && lireIdentite()?.durable) ? html`<${PageMonProfil} />`
         : p0 === 'simulateur' ? html`<${PageSimulateur} route=${route} />`
         : p0 === 'joueur' && route.parts[1] ? html`<${PageJoueur} id=${route.parts[1]} />`
         : html`<${PagePublique} route=${route} connecte=${false} />`;

@@ -6,17 +6,12 @@ import { Champ, Pastille, Chargement } from '../ui.js';
 import { OngletsPublics } from './public.js';
 import { ListeMatchs, bilanHisto } from './joueur.js';
 import { telechargerAttestation } from '../attestation-pdf.js';
+import { lireIdentite, ecrireIdentite, effacerIdentite } from '../identite.js';
 
-const CLE = 'fttt-profil';
 const TYPES = { simple: 'Simple', double: 'Double', equipe: 'Par équipes' };
 const GENRES = { dames: 'Dames', messieurs: 'Messieurs', mixte: 'Mixte', uni: 'Uni' };
 const LICENCES = { competition: 'Compétition', loisir: 'Loisir', dirigeant: 'Dirigeant' };
 const MSG_INCONNU = 'Aucune fiche ne correspond. Vérifie l\'orthographe de ton prénom et de ton nom, ta date de naissance, ou utilise ton numéro de licence.';
-
-export function lireSouvenir() {
-  try { const v = JSON.parse(localStorage.getItem(CLE) || 'null'); return v && v.identifiant && v.naissance ? v : null; } catch (e) { return null; }
-}
-const ecrireSouvenir = (v) => { try { v ? localStorage.setItem(CLE, JSON.stringify(v)) : localStorage.removeItem(CLE); } catch (e) { /* stockage indisponible */ } };
 
 const PAS = 5;
 
@@ -54,7 +49,7 @@ function Inscriptions({ liste, resultats }) {
 }
 
 export function PageMonProfil() {
-  const souvenir = useMemo(lireSouvenir, []);
+  const souvenir = useMemo(lireIdentite, []);
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
   const [numero, setNumero] = useState('');
@@ -70,19 +65,19 @@ export function PageMonProfil() {
       const r = await api.athleteProfil(identifiant, nais);
       if (r?.erreur) throw new Error(MSG_INCONNU);
       setProfil(r);
-      if (memoriser) ecrireSouvenir({ identifiant, naissance: nais });
-    } catch (err) { setErreur(msgErreur(err)); setProfil(null); if (souvenir) ecrireSouvenir(null); }
+      ecrireIdentite({ identifiant, naissance: nais }, memoriser);
+    } catch (err) { setErreur(msgErreur(err)); setProfil(null); if (souvenir) effacerIdentite(); }
     setOccupe(false);
   }
 
-  useEffect(() => { if (souvenir) charger(souvenir.identifiant, souvenir.naissance, true); }, []);
+  useEffect(() => { if (souvenir) charger(souvenir.identifiant, souvenir.naissance, souvenir.durable); }, []);
 
   function connecter(e) {
     e.preventDefault();
     const identifiant = numero.trim() ? numero.trim().toUpperCase() : `${prenom.trim()} ${nom.trim()}`;
     charger(identifiant, naissance, retenir);
   }
-  function quitter() { ecrireSouvenir(null); setProfil(null); setPrenom(''); setNom(''); setNumero(''); setNaissance(''); setErreur(''); }
+  function quitter() { effacerIdentite(); setProfil(null); setPrenom(''); setNom(''); setNumero(''); setNaissance(''); setErreur(''); }
   async function attestation() {
     try { await telechargerAttestation(profil); } catch (err) { setErreur(msgErreur(err)); }
   }
@@ -121,7 +116,7 @@ export function PageMonProfil() {
         <div class="etiquettes">
           ${enCours && html`<button class="btn btn-primaire" type="button" id="btn-attestation" onClick=${attestation}>Télécharger mon attestation (PDF)</button>`}
           <a class="btn btn-secondaire" href=${'#/sinscrire'}>M'inscrire à une compétition</a>
-          <button class="btn btn-secondaire" type="button" onClick=${quitter}>${souvenir ? 'Me déconnecter' : 'Ce n\'est pas moi / Quitter'}</button>
+          <button class="btn btn-secondaire" type="button" onClick=${quitter}>Ce n'est pas moi / Me déconnecter</button>
         </div>
         ${!enCours && html`<p class="aide">L'attestation n'est disponible que pour une licence active sur la saison en cours.</p>`}
       </section>

@@ -1,9 +1,10 @@
 // Inscription des athlètes eux-mêmes, sans compte : numéro de licence + date de naissance.
-import { html, useState } from '../preact.js';
+import { html, useState, useEffect } from '../preact.js';
 import { api } from '../data.js';
 import { fmtDate, fmtPts, msgErreur } from '../lib.js';
-import { Champ, Pastille } from '../ui.js';
+import { Champ, Pastille, Chargement } from '../ui.js';
 import { OngletsPublics } from './public.js';
+import { lireIdentite, ecrireIdentite, effacerIdentite } from '../identite.js';
 
 const TYPES = { simple: 'Simple', double: 'Double', equipe: 'Par équipes' };
 const MSG_INCONNU = 'Aucune fiche ne correspond. Vérifie l\'orthographe de ton prénom et de ton nom, ta date de naissance, ou utilise ton numéro de licence.';
@@ -51,6 +52,7 @@ export function PageSinscrire() {
   const [erreur, setErreur] = useState('');
   const [message, setMessage] = useState('');
   const [occupe, setOccupe] = useState(false);
+  const [auto, setAuto] = useState(() => !!lireIdentite());
 
   async function charger(n, d) {
     const r = await api.athleteCompetitions(n, d);
@@ -58,18 +60,28 @@ export function PageSinscrire() {
     setListe(r.competitions || []);
   }
 
-  async function connecter(e) {
-    e.preventDefault();
+  async function identifier(identifiant, nais, memoriser) {
     setErreur(''); setMessage(''); setOccupe(true);
     try {
-      const identifiant = numero.trim() ? numero.trim().toUpperCase() : `${prenom.trim()} ${nom.trim()}`;
-      const r = await api.athleteIdentifier(identifiant, naissance);
+      const r = await api.athleteIdentifier(identifiant, nais);
       if (r?.erreur) throw new Error(MSG_INCONNU);
-      const n = r.numero;
+      setNaissance(nais);
       setMoi(r);
-      await charger(n, naissance);
-    } catch (err) { setErreur(msgErreur(err)); setMoi(null); setListe(null); }
+      ecrireIdentite({ identifiant, naissance: nais }, memoriser);
+      await charger(r.numero, nais);
+    } catch (err) { setErreur(msgErreur(err)); setMoi(null); setListe(null); effacerIdentite(); }
     setOccupe(false);
+  }
+
+  // Déjà identifié dans « Mon profil » (ou ici) pendant cette session : on ne redemande rien.
+  useEffect(() => {
+    const id = lireIdentite();
+    if (id) identifier(id.identifiant, id.naissance, id.durable).then(() => setAuto(false)); else setAuto(false);
+  }, []);
+
+  function connecter(e) {
+    e.preventDefault();
+    identifier(numero.trim() ? numero.trim().toUpperCase() : `${prenom.trim()} ${nom.trim()}`, naissance, lireIdentite()?.durable);
   }
 
   // action : 'inscrire' | 'desinscrire' | 'proposer' | 'annuler' | 'accepter' | 'refuser'
@@ -91,12 +103,13 @@ export function PageSinscrire() {
     setOccupe(false);
   }
 
-  function quitter() { setMoi(null); setListe(null); setPrenom(''); setNom(''); setNumero(''); setNaissance(''); setMessage(''); setErreur(''); }
+  function quitter() { effacerIdentite(); setMoi(null); setListe(null); setPrenom(''); setNom(''); setNumero(''); setNaissance(''); setMessage(''); setErreur(''); }
 
   return html`<div class="page">
     <div class="page-tete"><div><h1>Je m'inscris</h1><p>Inscription aux compétitions avec ton nom et ta date de naissance</p></div></div>
     <${OngletsPublics} actif="sinscrire" />
-    ${!moi && html`<form class="carte" id="form-sinscrire" onSubmit=${connecter}>
+    ${!moi && auto && html`<${Chargement} texte="Vérification…" />`}
+    ${!moi && !auto && html`<form class="carte" id="form-sinscrire" onSubmit=${connecter}>
       <p>Saisis ton prénom, ton nom et ta date de naissance. Tu peux aussi utiliser ton numéro de licence (par exemple FTTT-00123), utile en cas d'homonyme.</p>
       <${Champ} id="s-prenom" libelle="Prénom">
         <input id="s-prenom" autocomplete="given-name" value=${prenom} onInput=${(e) => setPrenom(e.target.value)} required=${!numero.trim()} />
