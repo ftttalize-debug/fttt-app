@@ -89,6 +89,7 @@ export const api = {
   abonnerPush: (endpoint, p256dh, auth) => appeler('enregistrer_abonnement_push', { p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth }),
   desabonnerPush: (endpoint) => appeler('supprimer_abonnement_push', { p_endpoint: endpoint }),
   athleteIdentifier: (n, d) => appeler('athlete_identifier', { p_numero: n, p_naissance: d }),
+  athleteProfil: (n, d) => appeler('athlete_profil', { p_numero: n, p_naissance: d }),
   athleteCompetitions: (n, d) => appeler('athlete_competitions', { p_numero: n, p_naissance: d }),
   athleteInscrire: (n, d, c) => appeler('athlete_inscrire', { p_numero: n, p_naissance: d, p_competition: c }),
   athleteProposerDouble: (n, d, c, partenaire) => appeler('athlete_proposer_double', { p_numero: n, p_naissance: d, p_competition: c, p_partenaire: partenaire }),

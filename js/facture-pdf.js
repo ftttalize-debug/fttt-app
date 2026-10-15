@@ -5,7 +5,7 @@ const JSPDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.
 const INDIGO = [72, 58, 130];
 const BRUN = [74, 46, 34];
 
-function chargerJsPdf() {
+export function chargerJsPdf() {
   if (window.jspdf) return Promise.resolve(window.jspdf);
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
@@ -16,7 +16,7 @@ function chargerJsPdf() {
   });
 }
 
-async function logo() {
+export async function logo() {
   try {
     const blob = await (await fetch('assets/logo-complet.png')).blob();
     const url = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });

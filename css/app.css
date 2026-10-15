@@ -329,3 +329,8 @@ a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(-
 
 .installer{margin:0 0 16px}
 .installer .aide{margin:8px 0 0;font-size:.9rem;color:var(--texte-doux,#555)}
+
+.fiche-liste { margin: 12px 0 16px; display: grid; gap: 0; }
+.fiche-liste > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--bordure, #e6dfd6); }
+.fiche-liste dt { color: var(--brun-doux, #7a6558); }
+.fiche-liste dd { margin: 0; font-weight: 600; text-align: right; }

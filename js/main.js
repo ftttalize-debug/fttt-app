@@ -15,6 +15,7 @@ import { PagePublique } from './pages/public.js';
 import { PageSimulateur } from './pages/simulateur.js';
 import { PageCalendrier } from './pages/calendrier.js';
 import { PageSinscrire } from './pages/sinscrire.js';
+import { PageMonProfil, lireSouvenir } from './pages/monprofil.js';
 import { PageJoueur } from './pages/joueur.js';
 import { PagePoints } from './pages/points.js';
 import { PageComptes } from './pages/comptes.js';
@@ -104,6 +105,7 @@ function Pages({ ctx, route }) {
   if (p === 'classement' || p === 'resultats') return html`<${PagePublique} route=${route} connecte=${true} />`;
   if (p === 'calendrier') return html`<${PageCalendrier} />`;
   if (p === 'sinscrire') return html`<${PageSinscrire} />`;
+  if (p === 'monprofil') return html`<${PageMonProfil} />`;
   if (p === 'simulateur') return html`<${PageSimulateur} route=${route} />`;
   if (p === 'joueur' && id) return html`<${PageJoueur} id=${id} />`;
   if (p === 'connexion') return html`<${PageAccueil} ctx=${ctx} />`;
@@ -161,6 +163,7 @@ function App() {
     if (p0 !== 'connexion') {
       const page = p0 === 'calendrier' ? html`<${PageCalendrier} />`
         : p0 === 'sinscrire' ? html`<${PageSinscrire} />`
+        : p0 === 'monprofil' || (!p0 && lireSouvenir()) ? html`<${PageMonProfil} />`
         : p0 === 'simulateur' ? html`<${PageSimulateur} route=${route} />`
         : p0 === 'joueur' && route.parts[1] ? html`<${PageJoueur} id=${route.parts[1]} />`
         : html`<${PagePublique} route=${route} connecte=${false} />`;
