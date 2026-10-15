@@ -315,15 +315,6 @@ function LectureFiche({ ctx, l, estSoi }) {
   </section>`;
 }
 
-async function copierMessageNumero(l) {
-  const adresse = location.origin + location.pathname + '#/sinscrire';
-  const texte = `Bonjour ${l.prenom}, ton numéro de licence FTTT est ${l.numero_licence}. `
-    + `Pour t'inscrire toi-même aux compétitions, va sur ${adresse} et saisis ton prénom, ton nom et ta date de naissance (ou ce numéro). `
-    + `Garde ce numéro : il reste le même d'une saison à l'autre.`;
-  try { await navigator.clipboard.writeText(texte); toast('Message copié : colle-le dans WhatsApp ou un SMS.'); }
-  catch (e) { window.prompt('Copie ce message :', texte); }
-}
-
 // Attestation de licence PDF (même document que « Mon profil »), à partager depuis la fiche.
 function BoutonAttestation({ l }) {
   const [occupe, setOccupe] = useState(false);
@@ -341,7 +332,7 @@ function BoutonAttestation({ l }) {
       setOccupe(false);
     }
   }
-  return html`<button class="btn btn-secondaire" type="button" id="btn-attestation" style="margin-top:12px;margin-left:8px" disabled=${occupe} onClick=${envoyer}>${occupe ? 'Préparation…' : "Attestation de licence (PDF)"}</button>`;
+  return html`<button class="btn btn-secondaire" type="button" id="btn-attestation" style="margin-top:12px" disabled=${occupe} onClick=${envoyer}>${occupe ? 'Préparation…' : "Attestation de licence (PDF)"}</button>`;
 }
 
 function ContactSeul({ ctx, l }) {
@@ -407,7 +398,6 @@ export function PageLicencie({ ctx, id }) {
           ${l.numero_licence && html`<${Pastille}>N° ${l.numero_licence}<//>`}
           ${l.alerteCertificat && html`<${Pastille} genre="alerte">Certificat manquant<//>`}
         </div>
-        ${(ctx.estCadre || ctx.estResponsable) && l.numero_licence && html`<button class="btn btn-secondaire" type="button" id="btn-msg-numero" style="margin-top:12px" onClick=${() => copierMessageNumero(l)}>Copier le message avec le n° de licence</button>`}
         ${(ctx.estCadre || ctx.estResponsable) && l.numero_licence && l.statut === 'actif' && html`<${BoutonAttestation} l=${l} />`}
       </div>
       <div class="fiche-pts"><strong>${fmtPts(l.points)}</strong><small>points</small></div>
