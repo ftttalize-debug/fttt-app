@@ -1,5 +1,5 @@
 -- 034 : page publique « Mon profil » (athlète identifié par prénom + nom + date de naissance, ou n° de licence)
--- Renvoie : fiche de licence (n°, saison, statut, club, catégorie, points, rang), derniers résultats et inscriptions
+-- Renvoie (jusqu'à 300 derniers matchs, l'affichage les pagine) : fiche de licence (n°, saison, statut, club, catégorie, points, rang), derniers résultats et inscriptions
 -- (à venir et passées). Réutilise l'identification et la limitation d'essais de « Je m'inscris » (_athlete).
 -- Jamais renvoyés : certificat médical, e-mail, téléphone, adresse, représentant légal.
 -- Une personne masquée du site public voit quand même sa propre fiche.
@@ -44,7 +44,7 @@ begin
            where o.match_id = m.id and o.cote <> pm.cote) adv
        where pm.licencie_id = l.id and m.statut = 'valide' and co.statut in ('cloturee', 'terminee')
        order by co.date_debut desc, m.created_at desc
-       limit 30
+       limit 300
     ) t
   ) r;
 

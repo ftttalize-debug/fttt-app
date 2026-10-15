@@ -18,19 +18,38 @@ export function lireSouvenir() {
 }
 const ecrireSouvenir = (v) => { try { v ? localStorage.setItem(CLE, JSON.stringify(v)) : localStorage.removeItem(CLE); } catch (e) { /* stockage indisponible */ } };
 
-function Inscriptions({ liste }) {
-  const ligne = (c) => html`<li class="carte-comp" key=${c.id}>
+const PAS = 5;
+
+/** Affiche les 5 premiers éléments, puis « Voir plus » (+10 à chaque appui). */
+function Pagine({ items, rendu, vide }) {
+  const [n, setN] = useState(PAS);
+  if (!items.length) return html`<p class="vide">${vide}</p>`;
+  return html`<div>${rendu(items.slice(0, n))}
+    ${items.length > n && html`<p><button class="btn btn-secondaire" type="button" onClick=${() => setN(n + 10)}>Voir plus (${items.length - n})</button></p>`}</div>`;
+}
+
+function LigneInscription({ c, resultats, ouvrable }) {
+  const [ouvert, setOuvert] = useState(false);
+  const matchs = useMemo(() => resultats.filter((r) => r.competition_id === c.id), [resultats, c.id]);
+  return html`<li class="carte-comp" key=${c.id}>
     <div class="match-tete"><strong>${c.nom}</strong>${c.statut_competition === 'ouverte' && html`<${Pastille} genre="actif">Inscriptions ouvertes<//>`}</div>
     <p class="comp-date">${c.date_fin && c.date_fin !== c.date_debut ? `Du ${fmtDate(c.date_debut)} au ${fmtDate(c.date_fin)}` : fmtDate(c.date_debut)}${c.lieu ? ' · ' + c.lieu : ''}</p>
     <p class="comp-infos">${[TYPES[c.type] || c.type, GENRES[c.genre], c.categorie_max ? c.categorie_max + ' et moins' : null].filter(Boolean).join(' · ')}${c.nom_equipe ? ' · équipe ' + c.nom_equipe : ''}${c.partenaire ? ' · avec ' + c.partenaire : ''}</p>
+    ${ouvrable && html`<button class="btn btn-secondaire" type="button" aria-expanded=${ouvert} onClick=${() => setOuvert(!ouvert)}>${ouvert ? 'Masquer mes matchs' : 'Voir mes matchs'}</button>`}
+    ${ouvrable && ouvert && html`<div class="matchs-comp">${matchs.length
+      ? html`<${ListeMatchs} histo=${matchs} />`
+      : html`<p class="vide">Aucun match validé pour cette compétition.</p>`}</div>`}
   </li>`;
+}
+
+function Inscriptions({ liste, resultats }) {
   const avenir = liste.filter((c) => c.a_venir).sort((a, b) => String(a.date_debut).localeCompare(String(b.date_debut)));
-  const passees = liste.filter((c) => !c.a_venir);
+  const passees = liste.filter((c) => !c.a_venir).sort((a, b) => String(b.date_debut).localeCompare(String(a.date_debut)));
   return html`<div>
     <h3>À venir</h3>
-    ${avenir.length ? html`<ul class="liste-comp">${avenir.map(ligne)}</ul>` : html`<p class="vide">Aucune inscription à venir.</p>`}
+    <${Pagine} items=${avenir} vide="Aucune inscription à venir." rendu=${(l) => html`<ul class="liste-comp">${l.map((c) => html`<${LigneInscription} key=${c.id} c=${c} resultats=${resultats} ouvrable=${false} />`)}</ul>`} />
     <h3>Passées</h3>
-    ${passees.length ? html`<ul class="liste-comp">${passees.map(ligne)}</ul>` : html`<p class="vide">Aucune compétition passée.</p>`}
+    <${Pagine} items=${passees} vide="Aucune compétition passée." rendu=${(l) => html`<ul class="liste-comp">${l.map((c) => html`<${LigneInscription} key=${c.id} c=${c} resultats=${resultats} ouvrable=${true} />`)}</ul>`} />
   </div>`;
 }
 
@@ -108,9 +127,9 @@ export function PageMonProfil() {
       </section>
       <h2>Mes derniers résultats</h2>
       ${profil.resultats.length > 0 && html`<p class="aide">${bilan.v} victoire(s) · ${bilan.d} défaite(s) sur les matchs affichés.</p>`}
-      <${ListeMatchs} histo=${profil.resultats} />
+      <${Pagine} items=${profil.resultats} vide="Aucun match validé pour le moment." rendu=${(l) => html`<${ListeMatchs} histo=${l} />`} />
       <h2>Mes inscriptions</h2>
-      <${Inscriptions} liste=${profil.inscriptions} />
+      <${Inscriptions} liste=${profil.inscriptions} resultats=${profil.resultats} />
     </div>`}
   </div>`;
 }
