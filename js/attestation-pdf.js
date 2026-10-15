@@ -8,6 +8,28 @@ const TYPES = { competition: 'Compétition', loisir: 'Loisir', dirigeant: 'Dirig
 const t = (s) => String(s ?? '').replace(/[’‘]/g, "'").replace(/[–—]/g, '-');
 
 export async function telechargerAttestation(p) {
+  const doc = await construireAttestation(p);
+  doc.save(`attestation-licence-${p.numero}.pdf`);
+}
+
+// Ouvre le menu de partage du téléphone (WhatsApp, Gmail, SMS…) avec le PDF ; sinon, télécharge le fichier.
+export async function partagerAttestation(p) {
+  const doc = await construireAttestation(p);
+  const nom = `attestation-licence-${p.numero}.pdf`;
+  const fichier = new File([doc.output('blob')], nom, { type: 'application/pdf' });
+  if (navigator.canShare && navigator.canShare({ files: [fichier] })) {
+    try {
+      await navigator.share({ files: [fichier], title: 'Attestation de licence FTTT', text: `Attestation de licence de ${p.prenom} ${p.nom}` });
+      return 'partage';
+    } catch (e) {
+      if (e && e.name === 'AbortError') return 'annule';
+    }
+  }
+  doc.save(nom);
+  return 'telecharge';
+}
+
+async function construireAttestation(p) {
   const { jsPDF } = await chargerJsPdf();
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const img = await logo();
@@ -55,5 +77,5 @@ export async function telechargerAttestation(p) {
 
   doc.setFontSize(8); doc.setTextColor(120, 100, 90);
   doc.text('Fédération Tahitienne de Tennis de Table - BP 1839 Papeete', 105, 287, { align: 'center' });
-  doc.save(`attestation-licence-${p.numero}.pdf`);
+  return doc;
 }

@@ -8,6 +8,7 @@ import {
 } from '../lib.js';
 import { Icone, Pastille, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
 import { HistoriqueMatchs } from './matchs.js';
+import { partagerAttestation } from '../attestation-pdf.js';
 import { etatCompte } from './comptes.js';
 
 const CERT_PAR_DEFAUT = { competition: 'competition', loisir: 'loisir', evenementielle: 'evenementiel', dirigeant: '' };
@@ -323,6 +324,26 @@ async function copierMessageNumero(l) {
   catch (e) { window.prompt('Copie ce message :', texte); }
 }
 
+// Attestation de licence PDF (même document que « Mon profil »), à partager depuis la fiche.
+function BoutonAttestation({ l }) {
+  const [occupe, setOccupe] = useState(false);
+  async function envoyer() {
+    setOccupe(true);
+    try {
+      const p = await api.athleteProfil(l.numero_licence, l.date_naissance);
+      if (!p || p.erreur) throw new Error(p?.erreur || 'Fiche introuvable.');
+      if (!p.licence?.en_cours) { toast("Pas d'attestation : la licence n'est pas active sur la saison en cours.", 'erreur'); return; }
+      const r = await partagerAttestation(p);
+      if (r === 'telecharge') toast('Attestation téléchargée : envoie-la depuis tes fichiers.');
+    } catch (err) {
+      toast(msgErreur(err), 'erreur');
+    } finally {
+      setOccupe(false);
+    }
+  }
+  return html`<button class="btn btn-secondaire" type="button" id="btn-attestation" style="margin-top:12px;margin-left:8px" disabled=${occupe} onClick=${envoyer}>${occupe ? 'Préparation…' : "Attestation de licence (PDF)"}</button>`;
+}
+
 function ContactSeul({ ctx, l }) {
   const [email, setEmail] = useState(l.email || '');
   const [tel, setTel] = useState(l.telephone || '');
@@ -387,6 +408,7 @@ export function PageLicencie({ ctx, id }) {
           ${l.alerteCertificat && html`<${Pastille} genre="alerte">Certificat manquant<//>`}
         </div>
         ${(ctx.estCadre || ctx.estResponsable) && l.numero_licence && html`<button class="btn btn-secondaire" type="button" id="btn-msg-numero" style="margin-top:12px" onClick=${() => copierMessageNumero(l)}>Copier le message avec le n° de licence</button>`}
+        ${(ctx.estCadre || ctx.estResponsable) && l.numero_licence && l.statut === 'actif' && html`<${BoutonAttestation} l=${l} />`}
       </div>
       <div class="fiche-pts"><strong>${fmtPts(l.points)}</strong><small>points</small></div>
     </div>
