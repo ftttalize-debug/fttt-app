@@ -14,13 +14,15 @@ let compteur = 0;
 const participantVide = () => ({ cle: ++compteur, prenom: '', nom: '', naissance: '', sexe: '' });
 const estMineurValide = (n) => !!n && n <= aujourdhuiISO() && estMineur(n);
 
-/** Coordonnées bancaires pour un règlement par virement, avec copie de l'IBAN en un geste. */
-function CoordonneesVirement({ reference }) {
-  const [copie, setCopie] = useState(false);
-  async function copier() {
-    try { await navigator.clipboard.writeText(RIB.iban.replace(/\s/g, '')); setCopie(true); setTimeout(() => setCopie(false), 2500); }
-    catch (e) { toast('Copie impossible : sélectionne l\'IBAN et copie-le à la main.', 'erreur'); }
+/** Coordonnées bancaires pour un règlement par virement : IBAN copiable, objet à indiquer, et mail de preuve au secrétariat. */
+function CoordonneesVirement({ objet, confirmation = false, montant = null, noms = '', stagesTexte = '' }) {
+  const [copie, setCopie] = useState('');
+  async function copier(texte, cle) {
+    try { await navigator.clipboard.writeText(texte); setCopie(cle); setTimeout(() => setCopie(''), 2500); }
+    catch (e) { toast('Copie impossible : sélectionne le texte et copie-le à la main.', 'erreur'); }
   }
+  const mail = `mailto:${EMAIL_SECRETARIAT}?subject=${encodeURIComponent(`Virement stage FTTT - ${noms}`)}&body=${encodeURIComponent(
+    `Bonjour,\n\nJe viens d'effectuer le virement de ${montant !== null ? xpf(montant) : 'XXXX XPF'} pour le stage : ${stagesTexte}.\nParticipant(s) : ${noms}\nObjet du virement : ${objet}\n\nLa capture d'écran de la confirmation de virement est jointe à ce message.\n\nCordialement`)}`;
   return html`<div class="avis coordonnees-bancaires">
     <p><strong>Coordonnées pour le virement</strong></p>
     <dl class="fiche-liste">
@@ -28,9 +30,16 @@ function CoordonneesVirement({ reference }) {
       <div><dt>Banque</dt><dd>${RIB.banque}</dd></div>
       <div><dt>IBAN</dt><dd><span class="iban">${RIB.iban}</span></dd></div>
       <div><dt>BIC / SWIFT</dt><dd>${RIB.bic}</dd></div>
+      <div><dt>Objet du virement</dt><dd><span class="iban">${objet}</span></dd></div>
     </dl>
-    <p><button class="btn btn-secondaire" type="button" onClick=${copier}>${copie ? 'IBAN copié ✓' : 'Copier l\'IBAN'}</button></p>
-    <p class="aide">${reference ? 'Indique le nom du participant en référence du virement.' : 'Indique le nom du participant et le stage en référence du virement.'} Une facture acquittée sera remise après réception.</p>
+    <div class="etiquettes">
+      <button class="btn btn-secondaire" type="button" onClick=${() => copier(RIB.iban.replace(/\s/g, ''), 'iban')}>${copie === 'iban' ? 'IBAN copié ✓' : 'Copier l\'IBAN'}</button>
+      ${confirmation && html`<button class="btn btn-secondaire" type="button" onClick=${() => copier(objet, 'objet')}>${copie === 'objet' ? 'Objet copié ✓' : 'Copier l\'objet'}</button>`}
+    </div>
+    <p class="aide">Mets l'objet exactement comme ci-dessus : c'est ce qui permet au trésorier de retrouver ton paiement. Une facture acquittée sera remise après réception.</p>
+    ${confirmation && html`<p><strong>Une fois le virement fait</strong>, envoie la capture d'écran de la confirmation au secrétariat :
+      <br /><a class="btn btn-primaire" href=${mail}>Envoyer la preuve au secrétariat</a></p>
+      <p class="aide">Ton application de messagerie s'ouvre avec le message prêt : il te reste à joindre la capture d'écran (photo) et à envoyer. Adresse : ${EMAIL_SECRETARIAT}.</p>`}
   </div>`;
 }
 
@@ -42,6 +51,10 @@ function Confirmation({ stages, r, f, onRetour }) {
   const deja = lignes.filter((l) => l.deja);
   const paiement = Array.isArray(r.paiement) ? r.paiement : [];
   const stageParId = new Map(stages.map((s) => [s.id, s]));
+  const nomsUniques = [...new Set(confirmees.map((l) => `${String(l.nom).toUpperCase()} ${l.prenom}`))];
+  const noms = nomsUniques.join(' + ');
+  const stagesTexte = [...new Set(confirmees.map((l) => l.stage))].join(', ');
+  const objetVirement = `STAGE ${noms}`;
 
   // Une fiche par participant, avec tous ses stages confirmés
   const fiches = f.participants.map((p) => {
@@ -79,7 +92,7 @@ function Confirmation({ stages, r, f, onRetour }) {
     ${confirmees.length > 0 && r.mode_paiement === 'virement' && html`<div>
       <p>Règlement <strong>par virement</strong> de ${xpf(r.total_xpf)}.</p>
       ${paiement.length > 0 && html`<ul class="liste-simple">${paiement.map((l, k) => html`<li key=${k}>${l}</li>`)}</ul>`}
-      <${CoordonneesVirement} reference=${true} />
+      <${CoordonneesVirement} confirmation=${true} montant=${r.total_xpf} noms=${noms} stagesTexte=${stagesTexte} objet=${objetVirement} />
     </div>`}
     ${fiches.length > 0 && html`<div class="avis">
       <p><strong>À apporter le premier jour :</strong></p>
@@ -240,7 +253,7 @@ function Formulaire({ stages, preselection, onFait }) {
           <option value="virement">Par virement</option>
         </select>
       <//>
-      ${mode === 'virement' && html`<${CoordonneesVirement} />`}
+      ${mode === 'virement' && html`<${CoordonneesVirement} objet=${'STAGE NOM Prénom (ex. STAGE DUPONT Marie)'} />`}
       <div style="position:absolute;left:-9999px" aria-hidden="true">
         <label for="a-site">Ne pas remplir</label>
         <input id="a-site" type="text" tabindex="-1" autocomplete="off" value=${site} onInput=${(e) => setSite(e.target.value)} />
