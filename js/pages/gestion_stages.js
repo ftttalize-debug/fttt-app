@@ -158,6 +158,7 @@ function Detail({ stage, inscriptions, ctx, data, recharger, onRetour, onModifie
       <p><strong>${inscrits.length} / ${stage.places_max}</strong> inscrits · ${attente.length} en attente · ${payes.length} payé${payes.length > 1 ? 's' : ''} (${xpf(encaisse)} encaissés) · ${inscrits.filter((i) => i.fiche_recue).length} fiche${inscrits.filter((i) => i.fiche_recue).length > 1 ? 's' : ''} signée${inscrits.filter((i) => i.fiche_recue).length > 1 ? 's' : ''} reçue${inscrits.filter((i) => i.fiche_recue).length > 1 ? 's' : ''}</p>
       ${stage.statut === 'ouvert' && html`<p class="aide">Lien à publier sur Facebook (page des stages) : ${lienStage}</p>`}
       <div class="etiquettes">
+        <a class="btn btn-primaire" href=${'#/stages?stage=' + stage.id}>Ajouter un participant</a>
         <button class="btn btn-secondaire" type="button" onClick=${onModifier}>Modifier le stage</button>
         <button class="btn btn-secondaire" type="button" disabled=${inscriptions.length === 0} onClick=${exporter}>Exporter (CSV)</button>
         <button class="btn btn-secondaire" type="button" disabled=${inscrits.length === 0} onClick=${toutesLesFiches}>Toutes les fiches à signer (PDF)</button>

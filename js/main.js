@@ -70,6 +70,7 @@ function Cadre({ ctx, route, children }) {
           ${lienNav('classement', ['classement'], 'Classement', 'classement')}
           ${lienNav('simulateur', ['simulateur'], 'Simulateur', 'points')}
           ${ctx.estCadre && lienNav('gestion-stages', ['gestion-stages'], 'Stages', 'inscriptions')}
+          ${ctx.estResponsable && !ctx.estCadre && lienNav('stages', ['stages'], 'Stages', 'inscriptions')}
           ${ctx.estCadre && lienNav('renouvellements', ['renouvellements'], 'Renouvellements', 'licencies')}
           ${ctx.estCadre && lienNav('points', ['points'], 'Points', 'journal')}
           ${ctx.estCadre && lienNav('comptes', ['comptes'], 'Comptes', 'profil')}
