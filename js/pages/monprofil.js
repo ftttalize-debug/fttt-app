@@ -2,7 +2,7 @@
 import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
 import { fmtDate, fmtPts, fmtVariation, msgErreur } from '../lib.js';
-import { Champ, Pastille, Chargement } from '../ui.js';
+import { Champ, Pastille, Chargement, Pliable } from '../ui.js';
 import { OngletsPublics } from './public.js';
 import { ListeMatchs, ResultatsParCompetition, bilanHisto } from './joueur.js';
 import { telechargerAttestation } from '../attestation-pdf.js';
@@ -37,12 +37,50 @@ function LigneInscription({ c, resultats, ouvrable }) {
   </li>`;
 }
 
+const periode = (c) => (c.date_fin && c.date_fin !== c.date_debut ? `Du ${fmtDate(c.date_debut)} au ${fmtDate(c.date_fin)}` : fmtDate(c.date_debut));
+const detailsTableau = (c) => [TYPES[c.type] || c.type, GENRES[c.genre], c.categorie_max ? c.categorie_max + ' et moins' : null].filter(Boolean).join(' · ')
+  + (c.nom_equipe ? ' · équipe ' + c.nom_equipe : '') + (c.partenaire ? ' · avec ' + c.partenaire : '');
+
+/** Regroupe les tableaux d'un même événement : titre = partie commune avant « – », libellé du tableau = le reste. */
+function groupesEvenements(liste) {
+  const m = new Map();
+  liste.forEach((c) => {
+    const cle = c.evenement_id || c.id;
+    if (!m.has(cle)) m.set(cle, { cle, tableaux: [] });
+    m.get(cle).tableaux.push(c);
+  });
+  return [...m.values()].map((g) => {
+    const multi = g.tableaux.length > 1;
+    const base = (n) => String(n).split(/\s[–-]\s/)[0];
+    return { ...g, multi, titre: multi ? base(g.tableaux[0].nom) : g.tableaux[0].nom,
+      debut: g.tableaux.map((c) => c.date_debut).sort()[0], fin: g.tableaux.map((c) => c.date_fin || c.date_debut).sort().slice(-1)[0],
+      lieu: g.tableaux[0].lieu, ouverte: g.tableaux.some((c) => c.statut_competition === 'ouverte'),
+      tableaux: g.tableaux.map((c) => ({ ...c, libelle: multi ? (String(c.nom).split(/\s[–-]\s/).slice(1).join(' – ') || c.nom) : null })) };
+  });
+}
+
+/** Une compétition à venir : menu déroulant avec mes tableaux et, pour les compétitions par équipes, les journées restantes. */
+function CompetitionAVenir({ g }) {
+  const nbJournees = g.tableaux.reduce((t, c) => t + (c.journees || []).length, 0);
+  const sous = [periode({ date_debut: g.debut, date_fin: g.fin }), g.lieu,
+    g.multi ? `${g.tableaux.length} tableaux` : null, nbJournees ? `${nbJournees} journée${nbJournees > 1 ? 's' : ''} à venir` : null].filter(Boolean).join(' · ');
+  return html`<${Pliable} petit=${true} titre=${g.titre} sous=${sous}
+    resume=${g.ouverte ? html`<${Pastille} genre="actif">Ouverte<//>` : null}>
+    <ul class="tableaux-inscrit">${g.tableaux.map((c) => html`<li key=${c.id}>
+      ${c.libelle && html`<strong>${c.libelle}</strong>`}
+      <p class="comp-infos">${detailsTableau(c)}</p>
+      ${(c.journees || []).length > 0 && html`<div class="journees-restantes"><span class="aide">Journées à venir</span>
+        <ul>${c.journees.map((j) => html`<li key=${j.nom}><strong>${j.nom}</strong> · ${fmtDate(j.date)}</li>`)}</ul></div>`}
+    </li>`)}</ul>
+  <//>`;
+}
+
 function Inscriptions({ liste, resultats }) {
-  const avenir = liste.filter((c) => c.a_venir).sort((a, b) => String(a.date_debut).localeCompare(String(b.date_debut)));
+  const avenir = groupesEvenements(liste.filter((c) => c.a_venir)).sort((a, b) => String(a.debut).localeCompare(String(b.debut)));
   const passees = liste.filter((c) => !c.a_venir).sort((a, b) => String(b.date_debut).localeCompare(String(a.date_debut)));
   return html`<div>
     <h3>À venir</h3>
-    <${Pagine} items=${avenir} vide="Aucune inscription à venir." rendu=${(l) => html`<ul class="liste-comp">${l.map((c) => html`<${LigneInscription} key=${c.id} c=${c} resultats=${resultats} ouvrable=${false} />`)}</ul>`} />
+    ${avenir.length === 0 ? html`<p class="vide">Aucune inscription à venir.</p>` : html`<div class="resultats-comp">${avenir.map((g) => html`<${CompetitionAVenir} key=${g.cle} g=${g} />`)}</div>`}
     <h3>Passées</h3>
     <${Pagine} items=${passees} vide="Aucune compétition passée." rendu=${(l) => html`<ul class="liste-comp">${l.map((c) => html`<${LigneInscription} key=${c.id} c=${c} resultats=${resultats} ouvrable=${false} />`)}</ul>`} />
   </div>`;

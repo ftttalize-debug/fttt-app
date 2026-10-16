@@ -442,3 +442,10 @@ a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(-
 .carte-comp p { margin: 8px 0 0; }
 .carte-comp .comp-date { font-weight: 400; color: var(--brun); }
 .carte-comp .comp-infos { margin: 6px 0 0; }
+.tableaux-inscrit { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.tableaux-inscrit > li + li { border-top: 1px solid var(--trait); padding-top: 14px; }
+.tableaux-inscrit .comp-infos { margin: 4px 0 0; }
+.journees-restantes { margin-top: 8px; }
+.journees-restantes ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.journees-restantes li { color: var(--brun-doux); }
+.journees-restantes li strong { color: var(--brun); font-weight: 600; }
