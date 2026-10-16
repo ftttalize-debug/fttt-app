@@ -180,7 +180,7 @@ export function CarteMatchs({ ctx, c }) {
   if (!peutSaisir && matchs.length === 0) return null;
   return html`<section class="carte" aria-label="Matchs">
     <h2>Matchs et scores</h2>
-    ${peutSaisir && html`<p class="aide">Coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}. Les points des simples sont calculés à la validation, d'après les points de chaque joueur à la clôture.</p>`}
+    ${peutSaisir && html`<p class="aide">Coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}. Les points des simples sont calculés à la validation, ${c.type === 'equipe' ? 'd\'après les points à jour de chaque joueur au moment de la validation' : 'd\'après les points de chaque joueur à la clôture'}.</p>`}
     ${matchs.length === 0 ? html`<p class="aide">Aucun match saisi.</p>` : html`<ul class="matchs">${matchs.map((m) => html`<${LigneMatch} key=${m.id} ctx=${ctx} c=${c} m=${m} peutSaisir=${peutSaisir} onEdit=${(x) => setDialogue({ match: x })} />`)}</ul>`}
     <div class="actions">
       ${peutSaisir && html`<button class="btn btn-primaire" type="button" onClick=${() => setDialogue({})}>Saisir un match</button>`}
