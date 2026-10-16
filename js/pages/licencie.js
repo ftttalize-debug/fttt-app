@@ -8,7 +8,7 @@ import {
 } from '../lib.js';
 import { Icone, Pastille, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
 import { HistoriqueMatchs } from './matchs.js';
-import { partagerAttestation } from '../attestation-pdf.js';
+import { telechargerAttestation } from '../attestation-pdf.js';
 import { etatCompte } from './comptes.js';
 
 const CERT_PAR_DEFAUT = { competition: 'competition', loisir: 'loisir', evenementielle: 'evenementiel', dirigeant: '' };
@@ -315,7 +315,7 @@ function LectureFiche({ ctx, l, estSoi }) {
   </section>`;
 }
 
-// Attestation de licence PDF (même document que « Mon profil »), à partager depuis la fiche.
+// Attestation de licence PDF (même document que « Mon profil »), téléchargée depuis la fiche.
 function BoutonAttestation({ l }) {
   const [occupe, setOccupe] = useState(false);
   async function envoyer() {
@@ -324,8 +324,8 @@ function BoutonAttestation({ l }) {
       const p = await api.athleteProfil(l.numero_licence, l.date_naissance);
       if (!p || p.erreur) throw new Error(p?.erreur || 'Fiche introuvable.');
       if (!p.licence?.en_cours) { toast("Pas d'attestation : la licence n'est pas active sur la saison en cours.", 'erreur'); return; }
-      const r = await partagerAttestation(p);
-      if (r === 'telecharge') toast('Attestation téléchargée : envoie-la depuis tes fichiers.');
+      await telechargerAttestation(p);
+      toast('Attestation téléchargée : retrouve-la dans les téléchargements du téléphone ou de l\'ordinateur.');
     } catch (err) {
       toast(msgErreur(err), 'erreur');
     } finally {
