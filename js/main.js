@@ -64,6 +64,7 @@ function Cadre({ ctx, route, children }) {
             : lienNav('profil', ['profil'], 'Ma fiche', 'profil')}
           ${lienNav('competitions', ['competitions'], 'Compétitions', 'competitions')}
           ${gestion && lienNav('factures', ['factures'], 'Factures', 'factures')}
+          ${lienNav('saison', ['saison'], 'Saison', 'calendrier')}
           ${lienNav('classement', ['classement'], 'Classement', 'classement')}
           ${lienNav('simulateur', ['simulateur'], 'Simulateur', 'points')}
           ${ctx.estCadre && lienNav('renouvellements', ['renouvellements'], 'Renouvellements', 'licencies')}

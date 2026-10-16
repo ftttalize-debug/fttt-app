@@ -11,6 +11,7 @@ const ICONES = {
   factures: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
   matchs: '<circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 20 20"/><circle cx="18" cy="6" r="1.5"/>',
   classement: '<path d="M5 20V11M12 20V4M19 20v-6"/>',
+  calendrier: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   journal: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/>',
   profil: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
