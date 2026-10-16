@@ -1,10 +1,10 @@
 // « Mon profil » : fiche de licence, résultats et inscriptions de l'athlète, sans compte (prénom + nom + date de naissance).
 import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
-import { fmtDate, fmtPts, msgErreur } from '../lib.js';
+import { fmtDate, fmtPts, fmtVariation, msgErreur } from '../lib.js';
 import { Champ, Pastille, Chargement } from '../ui.js';
 import { OngletsPublics } from './public.js';
-import { ListeMatchs, bilanHisto } from './joueur.js';
+import { ListeMatchs, ResultatsParCompetition, bilanHisto } from './joueur.js';
 import { telechargerAttestation } from '../attestation-pdf.js';
 import { lireIdentite, ecrireIdentite, effacerIdentite } from '../identite.js';
 
@@ -120,9 +120,9 @@ export function PageMonProfil() {
         </div>
         ${!enCours && html`<p class="aide">L'attestation n'est disponible que pour une licence active sur la saison en cours.</p>`}
       </section>
-      <h2>Mes derniers résultats</h2>
-      ${profil.resultats.length > 0 && html`<p class="aide">${bilan.v} victoire(s) · ${bilan.d} défaite(s) sur les matchs affichés.</p>`}
-      <${Pagine} items=${profil.resultats} vide="Aucun match validé pour le moment." rendu=${(l) => html`<${ListeMatchs} histo=${l} />`} />
+      <h2>Mes résultats</h2>
+      ${profil.resultats.length > 0 && html`<p class="aide">${bilan.v} victoire(s) · ${bilan.d} défaite(s) · ${fmtVariation(bilan.points)} pts au total.</p>`}
+      <${ResultatsParCompetition} histo=${profil.resultats} />
       <h2>Mes inscriptions</h2>
       <${Inscriptions} liste=${profil.inscriptions} resultats=${profil.resultats} />
     </div>`}
