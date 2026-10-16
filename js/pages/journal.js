@@ -100,6 +100,7 @@ function Ligne({ ligne, ctx }) {
     </div>
     <p class="journal-phrase"><strong>${auteur(ligne, ctx)}</strong> ${VERBE[ligne.action]} ${NOM_TABLE[ligne.table_name] || ligne.table_name}${nom ? html` <strong>${nom}</strong>` : ''}.</p>
     <button class="btn btn-lien" type="button" aria-expanded=${ouvert} onClick=${() => setOuvert(!ouvert)}>${ouvert ? 'Masquer le détail' : 'Voir le détail'}</button>
+    ${ligne.motif && html`<p class="journal-phrase">Motif : <em>${ligne.motif}</em></p>`}
     ${ouvert && html`<dl class="journal-detail">
       ${diffs.length === 0 && html`<dt>Aucun champ modifié</dt><dd></dd>`}
       ${diffs.map((d) => ligne.action === 'UPDATE'

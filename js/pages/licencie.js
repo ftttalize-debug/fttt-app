@@ -183,6 +183,57 @@ function DialogueLicence({ ctx, l, onFermer }) {
   <//>`;
 }
 
+// ---------- Ajustement manuel des points (cadre fédéral) ----------
+function DialogueAjustePoints({ ctx, l, onFermer }) {
+  const [valeur, setValeur] = useState(String(l.points).replace('.', ','));
+  const [motif, setMotif] = useState('');
+  const [occupe, setOccupe] = useState(false);
+  const nouveau = Number(valeur.replace(',', '.'));
+  const valide = valeur.trim() !== '' && Number.isFinite(nouveau) && nouveau >= 0 && nouveau <= 9999.9 && nouveau !== Number(l.points) && motif.trim().length >= 3;
+
+  async function valider(e) {
+    e.preventDefault();
+    if (!valide) return;
+    setOccupe(true);
+    try {
+      await api.ajusterPoints(l.id, nouveau, motif.trim());
+      await ctx.recharger();
+      toast(`Points ajustés : ${fmtPts(nouveau)}. Le classement publié change au prochain « Relancer » du mois.`);
+      onFermer();
+    } catch (err) {
+      toast(msgErreur(err), 'erreur');
+    } finally {
+      setOccupe(false);
+    }
+  }
+
+  return html`<${Dialogue} titre="Ajuster les points" onFermer=${onFermer}>
+    <form class="grille" onSubmit=${valider} noValidate>
+      <p>${nomComplet(l)} : ${fmtPts(l.points)} points actuellement.</p>
+      <${Champ} id="aj-points" libelle="Nouveau total de points">
+        <input id="aj-points" type="text" inputmode="decimal" value=${valeur} onInput=${(e) => setValeur(e.target.value)} />
+      <//>
+      <${Champ} id="aj-motif" libelle="Motif (obligatoire)" aide="Visible seulement dans le journal, jamais sur le site public.">
+        <input id="aj-motif" type="text" value=${motif} onInput=${(e) => setMotif(e.target.value)} placeholder="Ex. Points de départ avant licence" />
+      <//>
+      <div class="actions">
+        <button class="btn btn-primaire" type="submit" disabled=${occupe || !valide}>${occupe ? 'Enregistrement…' : 'Enregistrer'}</button>
+        <button class="btn btn-secondaire" type="button" onClick=${onFermer}>Annuler</button>
+      </div>
+    </form>
+  <//>`;
+}
+
+function BoutonAjustePoints({ ctx, l }) {
+  const [ouvert, setOuvert] = useState(false);
+  return html`<section class="carte" aria-label="Points">
+    <h2>Points</h2>
+    <p>Pour un joueur qui arrive avec des points d'ailleurs ou une correction. Chaque ajustement est journalisé avec son motif.</p>
+    <div class="actions"><button class="btn btn-secondaire" type="button" onClick=${() => setOuvert(true)}>Ajuster les points</button></div>
+    ${ouvert && html`<${DialogueAjustePoints} ctx=${ctx} l=${l} onFermer=${() => setOuvert(false)} />`}
+  </section>`;
+}
+
 // ---------- Carte « Licence de la saison » ----------
 function CarteLicence({ ctx, l }) {
   const lc = l.courante;
@@ -409,6 +460,7 @@ export function PageLicencie({ ctx, id }) {
       : html`<${LectureFiche} ctx=${ctx} l=${l} estSoi=${estSoi} />`}
     ${!ctx.estCadre && estSoi && html`<${ContactSeul} ctx=${ctx} l=${l} />`}
     <${CarteLicence} ctx=${ctx} l=${l} />
+    ${ctx.estCadre && html`<${BoutonAjustePoints} ctx=${ctx} l=${l} />`}
     <${Historique} ctx=${ctx} l=${l} />
     <${HistoriqueMatchs} ctx=${ctx} l=${l} />
     ${ctx.estCadre && html`<section class="carte" aria-label="Compte et accès">
