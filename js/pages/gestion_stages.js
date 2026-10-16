@@ -8,6 +8,7 @@ import { telechargerFiche, telechargerFiches } from '../fiche-stage-pdf.js';
 
 const xpf = (n) => `${Number(n || 0).toLocaleString('fr-FR')} XPF`;
 const quand = (s) => (s.date_fin && s.date_fin !== s.date_debut ? `Du ${fmtDate(s.date_debut)} au ${fmtDate(s.date_fin)}` : fmtDate(s.date_debut));
+const LIEN_STAGES = `${location.origin}${location.pathname}#/stages`;
 const STATUTS = { brouillon: 'Brouillon (non visible)', ouvert: 'Ouvert aux inscriptions', clos: 'Clos' };
 const MODES = { sur_place: 'sur place', virement: 'virement' };
 
@@ -135,7 +136,7 @@ function Detail({ stage, inscriptions, ctx, data, recharger, onRetour, onModifie
       await telechargerFiches(fiches, stage.nom);
     } catch (e) { toast(msgErreur(e), 'erreur'); }
   }
-  const lienStage = `${location.origin}${location.pathname}#/stages?stage=${stage.id}`;
+  const lienStage = LIEN_STAGES;
   async function copierLien() {
     try { await navigator.clipboard.writeText(lienStage); toast('Lien copié : colle-le dans ta publication Facebook.'); }
     catch { window.prompt('Copie ce lien :', lienStage); }
@@ -155,7 +156,7 @@ function Detail({ stage, inscriptions, ctx, data, recharger, onRetour, onModifie
       <p class="comp-date">${quand(stage)}${stage.lieu ? ' · ' + stage.lieu : ''}</p>
       <p class="comp-infos">Licencié ${xpf(stage.tarif_licencie)} · Non licencié ${xpf(stage.tarif_non_licencie)}</p>
       <p><strong>${inscrits.length} / ${stage.places_max}</strong> inscrits · ${attente.length} en attente · ${payes.length} payé${payes.length > 1 ? 's' : ''} (${xpf(encaisse)} encaissés) · ${inscrits.filter((i) => i.fiche_recue).length} fiche${inscrits.filter((i) => i.fiche_recue).length > 1 ? 's' : ''} signée${inscrits.filter((i) => i.fiche_recue).length > 1 ? 's' : ''} reçue${inscrits.filter((i) => i.fiche_recue).length > 1 ? 's' : ''}</p>
-      ${stage.statut === 'ouvert' && html`<p class="aide">Lien direct à publier sur Facebook : ${lienStage}</p>`}
+      ${stage.statut === 'ouvert' && html`<p class="aide">Lien à publier sur Facebook (page des stages) : ${lienStage}</p>`}
       <div class="etiquettes">
         <button class="btn btn-secondaire" type="button" onClick=${onModifier}>Modifier le stage</button>
         <button class="btn btn-secondaire" type="button" disabled=${inscriptions.length === 0} onClick=${exporter}>Exporter (CSV)</button>
@@ -196,7 +197,11 @@ export function PageGestionStages({ ctx }) {
       onRetour=${() => setSel(null)} onModifier=${() => setForm('modifier')} />`;
   } else {
     contenu = html`<div>
-      <button class="btn btn-primaire" type="button" onClick=${() => setForm('nouveau')}>Nouveau stage</button>
+      <div class="etiquettes">
+        <button class="btn btn-primaire" type="button" onClick=${() => setForm('nouveau')}>Nouveau stage</button>
+        <button class="btn btn-secondaire" type="button" onClick=${async () => { try { await navigator.clipboard.writeText(LIEN_STAGES); toast('Lien copié : colle-le dans ta publication Facebook.'); } catch { window.prompt('Copie ce lien :', LIEN_STAGES); } }}>Copier le lien des inscriptions</button>
+      </div>
+      <p class="aide">Lien unique à publier sur Facebook : ${LIEN_STAGES}. Il mène à la page des stages ouverts.</p>
       ${data.stages.length === 0 ? html`<p class="vide" style="margin-top:12px">Aucun stage. Crée le premier.</p>` : html`<ul class="liste-comp" style="margin-top:12px">
         ${[...data.stages].sort((a, b) => (a.date_debut < b.date_debut ? -1 : 1)).map((s) => {
           const l = parStage.get(s.id) || [];
