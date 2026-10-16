@@ -92,6 +92,7 @@ export function PageComptes({ ctx }) {
         <${Champ} id="cp-role" libelle="Rôle">
           <select id="cp-role" value=${role} onChange=${(e) => setRole(e.target.value)}>
             <option value="responsable_club">Responsable de club</option>
+            <option value="juge_arbitre">Juge-arbitre</option>
             <option value="cadre_federal">Cadre fédéral</option>
           </select>
         <//>
