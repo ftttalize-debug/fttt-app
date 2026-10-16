@@ -105,6 +105,21 @@ export function PageCompetitions({ ctx, route }) {
   </div>`;
 }
 
+// Qui peut inscrire : quatre choix, du plus ouvert au plus fermé (le cadre fédéral peut toujours inscrire)
+const MODES_INSCRIPTION = [
+  ['tous', 'Ouverte à tous', 'Toutes les licences (compétition, loisir, événementielle) : les athlètes eux-mêmes, les responsables de club et la fédération.'],
+  ['athletes', 'Athlètes en compétition', 'Les athlètes licenciés compétition eux-mêmes, les responsables de club et la fédération.'],
+  ['clubs', 'Responsables de club et fédération', 'Les athlètes ne peuvent pas s\'inscrire eux-mêmes.'],
+  ['federation', 'Fédération uniquement', 'Ni les clubs ni les athlètes ne peuvent inscrire.']
+];
+const MODES_VALEURS = {
+  tous: { ouverte_a_tous: true, inscription_athletes: true, inscription_federation: false },
+  athletes: { ouverte_a_tous: false, inscription_athletes: true, inscription_federation: false },
+  clubs: { ouverte_a_tous: false, inscription_athletes: false, inscription_federation: false },
+  federation: { ouverte_a_tous: false, inscription_athletes: false, inscription_federation: true }
+};
+const modeInscription = (f) => (f.inscription_federation ? 'federation' : !f.inscription_athletes ? 'clubs' : f.ouverte_a_tous ? 'tous' : 'athletes');
+
 const vide = (ctx) => ({
   nom: '', saison_id: ctx.saison?.id || '', lieu: '', date_debut: '', date_fin: '', type: 'simple',
   coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: '', categorie_min: '', points_max: '', inscription_federation: false, inscription_athletes: true, nb_simples: '', nb_doubles: ''
@@ -211,22 +226,11 @@ function Formulaire({ ctx, c }) {
         <input id="p-limite" type="date" disabled=${dis} value=${f.date_limite_inscription} onInput=${(e) => maj({ date_limite_inscription: e.target.value })} /><//>
       <div class="plein"><fieldset class="champ">
         <legend>Qui peut inscrire ?</legend>
-        <p class="aide">Le cadre fédéral peut toujours inscrire. Si tu décoches tout, seule la fédération inscrit.</p>
-        <div class="case">
-          <input id="p-clubs" type="checkbox" disabled=${dis} checked=${!f.inscription_federation}
-            onChange=${(e) => maj(e.target.checked ? { inscription_federation: false } : { inscription_federation: true, inscription_athletes: false })} />
-          <label for="p-clubs">Les responsables de club</label>
-        </div>
-        <div class="case">
-          <input id="p-ath" type="checkbox" disabled=${dis || f.inscription_federation} checked=${!f.inscription_federation && f.inscription_athletes}
-            onChange=${(e) => maj({ inscription_athletes: e.target.checked })} />
-          <label for="p-ath">Les athlètes eux-mêmes (« Je m'inscris »)</label>
-        </div>
+        ${MODES_INSCRIPTION.map(([k, titre, detail]) => html`<div class="case" key=${k}>
+          <input id=${'p-mode-' + k} type="radio" name="mode-inscription" disabled=${dis} checked=${modeInscription(f) === k} onChange=${() => maj(MODES_VALEURS[k])} />
+          <label for=${'p-mode-' + k}><strong>${titre}</strong><br /><small>${detail}</small></label>
+        </div>`)}
       </fieldset></div>
-      <div class="plein"><div class="case">
-        <input id="p-tous" type="checkbox" disabled=${dis} checked=${f.ouverte_a_tous} onChange=${(e) => maj({ ouverte_a_tous: e.target.checked })} />
-        <label for="p-tous">Ouverte à tous (toutes les licences peuvent s'inscrire, y compris loisir et événementielle)</label>
-      </div></div>
     </div>
     ${peut && html`<div class="actions">
       <button class="btn btn-primaire" type="submit" disabled=${!modifie || occupe}>${occupe ? 'Enregistrement…' : nouveau ? 'Créer la compétition' : 'Enregistrer'}</button>
