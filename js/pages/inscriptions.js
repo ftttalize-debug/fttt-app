@@ -155,7 +155,7 @@ export function CarteInscriptions({ ctx, c }) {
     }
   }
 
-  return html`<${Pliable} titre="Inscriptions" ouvert=${false}>
+  return html`<${Pliable} titre="Inscriptions" sous="Joueurs et équipes inscrits" ouvert=${false}>
     ${visibles.length > 0 && html`<p><button class="btn btn-secondaire" type="button" id="exp-inscriptions" onClick=${exporter}><${Icone} nom="telecharger" taille=${18} /> Exporter (CSV)</button></p>`}
     ${gestionnaire && html`<p class="aide">${toutes.length} inscription${toutes.length > 1 ? 's' : ''} · ${nbJoueurs} joueur${nbJoueurs > 1 ? 's' : ''}${ctx.estCadre ? ` · ${fmtXpf(montantTotal)} au total` : ''}</p>`}
     ${gere.length > 0 && !agir && c.statut === 'ouverte' && html`<p class="avis">La date limite est passée (${fmtDate(c.date_limite_inscription)}). Contacte la fédération pour toute modification.</p>`}

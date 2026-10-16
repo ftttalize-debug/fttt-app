@@ -178,7 +178,7 @@ export function CarteMatchs({ ctx, c }) {
     } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
   if (!peutSaisir && matchs.length === 0) return null;
-  return html`<${Pliable} titre="Matchs et scores" ouvert=${true}>
+  return html`<${Pliable} titre="Matchs et scores" sous="Saisir et valider les résultats" ouvert=${true}>
     ${peutSaisir && html`<p class="aide">Coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}. Les points des simples sont calculés à la validation, ${c.type === 'equipe' ? 'd\'après les points à jour de chaque joueur au moment de la validation' : 'd\'après les points de chaque joueur à la clôture'}.</p>`}
     ${matchs.length === 0 ? html`<p class="aide">Aucun match saisi.</p>` : html`<ul class="matchs">${matchs.map((m) => html`<${LigneMatch} key=${m.id} ctx=${ctx} c=${c} m=${m} peutSaisir=${peutSaisir} onEdit=${(x) => setDialogue({ match: x })} />`)}</ul>`}
     <div class="actions">
@@ -200,7 +200,7 @@ export function CarteJuges({ ctx, c }) {
     setOccupe(true);
     try { await fn(); await ctx.recharger(); toast(message); setAjout(null); } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
-  return html`<${Pliable} titre="Juges-arbitres" ouvert=${false}>
+  return html`<${Pliable} titre="Juges-arbitres" sous="Qui peut saisir les scores" ouvert=${false}>
     ${juges.length === 0 ? html`<p class="aide">Aucun juge-arbitre désigné. Il saisira les scores une fois les inscriptions closes.</p>` : html`<ul class="historique">
       ${juges.map((j) => html`<li key=${j.id}><strong style="flex:1">${nomJ(ctx, j.licencie_id)}</strong>
         <button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => agir(() => api.retirerJuge(j.id), 'Juge retiré.')}>Retirer</button></li>`)}</ul>`}

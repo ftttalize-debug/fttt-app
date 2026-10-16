@@ -85,7 +85,7 @@ export function CarteFacturation({ ctx, c }) {
       toast(n === 0 ? 'Aucune nouvelle facture à générer.' : `${n} facture${n > 1 ? 's' : ''} générée${n > 1 ? 's' : ''}.`);
     } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
-  return html`<${Pliable} titre="Facturation" ouvert=${false}>
+  return html`<${Pliable} titre="Facturation" sous="Une facture par inscription" ouvert=${false}>
     <p class="aide">${factures.length} facture${factures.length > 1 ? 's' : ''} · ${sans.length} inscription${sans.length > 1 ? 's' : ''} sans facture</p>
     ${c.montant_xpf === 0 && html`<p class="avis">Compétition gratuite : aucune facture n'est créée.</p>`}
     <div class="actions">

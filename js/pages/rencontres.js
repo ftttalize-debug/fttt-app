@@ -162,7 +162,7 @@ function Classement({ ctx, c, equipes, rencontres }) {
     return [...t.values()].filter((x) => x.j > 0).sort((x, y) => (y.v + y.n / 2) - (x.v + x.n / 2) || (y.pour - y.contre) - (x.pour - x.contre) || x.nom.localeCompare(y.nom));
   }, [ctx.matchs, ctx.inscriptions, rencontres]);
   if (!lignes.length) return null;
-  return html`<${Pliable} petit titre="Classement des équipes" ouvert=${false}>
+  return html`<${Pliable} petit titre="Classement des équipes" sous="Points et victoires de chaque équipe" ouvert=${false}>
     <ul class="historique">${lignes.map((x, k) => html`<li key=${x.id}><span style="flex:1"><strong>${k + 1}. ${x.nom}</strong>
       <small> ${x.j} rencontre${x.j > 1 ? 's' : ''} · ${x.v} V · ${x.n} N · ${x.d} D · matchs ${x.pour}-${x.contre}</small></span></li>`)}</ul><//>`;
 }
@@ -186,7 +186,7 @@ export function CarteTours({ ctx, c }) {
     ? agir(() => api.modifierTour(dialogue.tour.id, nom.trim(), date), 'Tour modifié.')
     : agir(() => api.creerTour(c.id, nom.trim(), date), 'Tour ajouté.'));
   const nbRencontres = (t) => ctx.rencontres.filter((r) => r.competition_id === c.id && r.tour === t.nom).length;
-  return html`<${Pliable} titre="Gérer les journées" ouvert=${false}>
+  return html`<${Pliable} titre="Gérer les journées" sous="Créer, dater ou supprimer une journée" ouvert=${false}>
     <p class="aide">Une compétition par équipes se joue en plusieurs tours, chacun à sa date (du ${fmtDate(c.date_debut)} au ${fmtDate(c.date_fin)}). Les rencontres se rattachent à un tour.</p>
     ${tours.length === 0 ? html`<p class="aide">Aucun tour défini.</p>` : html`<ul class="historique">${tours.map((t) => html`<li key=${t.id}>
       <span style="flex:1"><strong>${t.nom}</strong> · <span style="white-space:nowrap">${fmtDate(t.date_tour)}</span><br /><small style="white-space:nowrap">${nbRencontres(t)}\u00a0rencontre${nbRencontres(t) > 1 ? 's' : ''}</small></span>
@@ -213,7 +213,7 @@ function Effectifs({ ctx, c, equipes, peut }) {
     setOccupe(true);
     try { await api.retirerJoueurEquipe(i.id, j.licencie_id); await ctx.recharger(); toast('Joueur retiré de l\'effectif.'); } catch (er) { toast(msgErreur(er), 'erreur'); } finally { setOccupe(false); }
   }
-  return html`<${Pliable} petit titre="Effectifs des équipes" ouvert=${false}>
+  return html`<${Pliable} petit titre="Effectifs des équipes" sous="Joueurs de chaque équipe" ouvert=${false}>
     <p class="aide">L'effectif se forme au fil des matchs : un joueur qui a joué pour une équipe y reste pour toute la compétition.</p>
     <ul class="historique">${equipes.map((i) => html`<li key=${i.id} style="display:block"><strong>${nomEquipe(ctx, i)}</strong> <small>${ctx.clubParId.get(i.club_id)?.nom || ''}</small>
       ${i.joueurs.length === 0 ? html`<div class="aide">Aucun joueur pour le moment.</div>` : html`<div class="aide">${i.joueurs.map((j, k) => { const l = ctx.licencieParId.get(j.licencie_id);
@@ -249,7 +249,7 @@ export function CarteRencontres({ ctx, c }) {
     setOccupe(true);
     try { const n = await fn(); await ctx.recharger(); toast(typeof message === 'function' ? message(n) : message); } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
-  return html`<${Pliable} titre="Journées et rencontres" ouvert=${true}>
+  return html`<${Pliable} titre="Journées et rencontres" sous="Choisis la journée pour saisir les matchs" ouvert=${true}>
     ${tours.length === 0 && peutSaisir && html`<p class="avis">Définis d'abord les journées et leurs dates dans « Tours et dates ».</p>`}
     <p class="aide">${c.nb_simples != null || c.nb_doubles != null ? `Format : ${c.nb_simples ?? 0} simples et ${c.nb_doubles ?? 0} doubles par rencontre. ` : ''}Touche une journée pour l'ouvrir, puis une rencontre pour saisir ses matchs. Seuls les simples donnent des points (coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}), à la validation.</p>
     ${tours.map((t) => { const ferme = !!t.cloture; const saisie = peutSaisir && (!ferme || ctx.estCadre); const nbV = aValiderDe(t).length;

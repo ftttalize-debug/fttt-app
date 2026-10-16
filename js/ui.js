@@ -43,10 +43,10 @@ export function BadgePts({ v }) {
 }
 
 // Bloc pliable : on touche le titre pour ouvrir ou fermer (petit = sous-bloc à l'intérieur d'une carte).
-export function Pliable({ titre, resume, ouvert = false, petit = false, children }) {
+export function Pliable({ titre, sous, resume, ouvert = false, petit = false, children }) {
   const T = petit ? 'h3' : 'h2';
   return html`<details class=${petit ? 'pliable pliable-petit' : 'carte pliable'} open=${ouvert}>
-    <summary><${T}>${titre}<//>${resume ? html`<small class="pliable-resume">${resume}</small>` : ''}</summary>
+    <summary><div class="pliable-titre"><${T}>${titre}<//>${sous ? html`<span class="pliable-sous">${sous}</span>` : ''}</div>${resume ? html`<small class="pliable-resume">${resume}</small>` : ''}</summary>
     <div class="pliable-corps">${children}</div>
   </details>`;
 }

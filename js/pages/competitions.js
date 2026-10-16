@@ -187,7 +187,7 @@ function Formulaire({ ctx, c }) {
     }
   }
   const dis = !peut;
-  return html`<${Pliable} titre="Informations et réglages" ouvert=${false}><form onSubmit=${enregistrer} noValidate>
+  return html`<${Pliable} titre="Informations et réglages" sous="Nom, dates, tarifs, coefficient" ouvert=${false}><form onSubmit=${enregistrer} noValidate>
     <div class="grille grille-2">
       <div class="plein"><${Champ} id="p-nom" libelle="Nom de la compétition" erreur=${erreurs.nom}>
         <input id="p-nom" type="text" disabled=${dis} value=${f.nom} onInput=${(e) => maj({ nom: e.target.value })} /><//></div>
@@ -273,7 +273,7 @@ function Etat({ ctx, c }) {
   }
   const aujourdhui = aujourdhuiISO();
   const limitePassee = c.date_limite_inscription && c.date_limite_inscription < aujourdhui;
-  return html`<${Pliable} titre="État" ouvert=${true}>
+  return html`<${Pliable} titre="État" sous="Ouvrir ou clôturer la compétition" ouvert=${true}>
     <p><${Pastille} genre=${GENRE[c.statut]}>${STATUTS[c.statut]}<//></p>
     ${c.statut === 'brouillon' && html`<p class="aide">Invisible des clubs. Ouvre les inscriptions quand les informations sont prêtes.</p>
       ${!c.date_limite_inscription && html`<p class="avis">Pas de date limite : les clubs pourront s'inscrire jusqu'à la clôture.</p>`}
@@ -332,7 +332,7 @@ function CarteTableaux({ ctx, c }) {
       setOccupe(false);
     }
   }
-  return html`<${Pliable} titre="Tableaux" ouvert=${false}>
+  return html`<${Pliable} titre="Tableaux" sous="Simple, double… et leurs catégories" ouvert=${false}>
     <p class="aide">Pour un championnat avec plusieurs tableaux (U19, U15, doubles…), chaque tableau est une compétition à part avec ses inscriptions, sa facture et ses scores. Les dates, le lieu, le coefficient et les juges sont copiés depuis celle-ci.</p>
     ${freres.length > 0 && html`<ul class="liste">${freres.map((x) => html`<li key=${x.id}><a class="ligne" style="display:flex" href=${lien(['competitions', x.id])}>
       <span class="ligne-nom"><strong>${x.nom}</strong></span>
