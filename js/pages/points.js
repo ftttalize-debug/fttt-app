@@ -49,15 +49,15 @@ export function PagePoints({ ctx }) {
   return html`<div class="page">
     <div class="page-tete"><div><h1>Points et saisons</h1><p>Saison ${ctx.saison?.libelle}</p></div></div>
     <section class="carte" aria-label="Clôture mensuelle">
-      <h2>Classement mensuel</h2>
-      <p class="aide">Chaque mois, clôture le mois : les points des matchs validés s'ajoutent à ceux des joueurs et le classement du mois est publié.</p>
+      <h2>Points par mois</h2>
+      <p class="aide">Les points s'ajoutent à ceux des joueurs dès que tu valides les matchs, et le classement se met à jour tout de suite. Il n'y a plus de clôture mensuelle à faire.</p>
       <ul class="historique">
         ${mois.map((m) => {
           const fait = publies?.includes(m.mois);
           return html`<li key=${m.mois}>
             <strong style="flex:1;text-transform:capitalize">${libelleMois(m.mois)}</strong>
-            ${fait && m.aAppliquer === 0 ? html`<${Pastille} genre="actif">Publié<//>` : m.aAppliquer > 0 ? html`<${Pastille} genre="alerte">${m.aAppliquer} mouvement${m.aAppliquer > 1 ? 's' : ''} à appliquer<//>` : html`<${Pastille}>Rien à appliquer<//>`}
-            <button class="btn btn-secondaire" type="button" disabled=${occupe || publies === null || (fait && m.aAppliquer === 0)} onClick=${() => cloturer(m.mois)}>${fait ? 'Relancer' : 'Clôturer'}</button>
+            ${fait && m.aAppliquer === 0 ? html`<${Pastille} genre="actif">Points appliqués<//>` : m.aAppliquer > 0 ? html`<${Pastille} genre="alerte">${m.aAppliquer} mouvement${m.aAppliquer > 1 ? 's' : ''} à appliquer<//>` : html`<${Pastille}>Aucun match<//>`}
+            ${m.aAppliquer > 0 && html`<button class="btn btn-secondaire" type="button" disabled=${occupe || publies === null} onClick=${() => cloturer(m.mois)}>Appliquer</button>`}
           </li>`;
         })}
       </ul>
