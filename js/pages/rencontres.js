@@ -189,7 +189,7 @@ export function CarteTours({ ctx, c }) {
   return html`<${Pliable} titre="Gérer les journées" ouvert=${false}>
     <p class="aide">Une compétition par équipes se joue en plusieurs tours, chacun à sa date (du ${fmtDate(c.date_debut)} au ${fmtDate(c.date_fin)}). Les rencontres se rattachent à un tour.</p>
     ${tours.length === 0 ? html`<p class="aide">Aucun tour défini.</p>` : html`<ul class="historique">${tours.map((t) => html`<li key=${t.id}>
-      <span style="flex:1"><strong>${t.nom}</strong> · ${fmtDate(t.date_tour)}<small> ${nbRencontres(t)} rencontre${nbRencontres(t) > 1 ? 's' : ''}</small></span>
+      <span style="flex:1"><strong>${t.nom}</strong> · <span style="white-space:nowrap">${fmtDate(t.date_tour)}</span><br /><small style="white-space:nowrap">${nbRencontres(t)}\u00a0rencontre${nbRencontres(t) > 1 ? 's' : ''}</small></span>
       ${peut && html`<span class="etiquettes"><button class="btn btn-lien" type="button" onClick=${() => ouvrir(t)}>Modifier</button>
         ${nbRencontres(t) === 0 && html`<button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => agir(() => api.supprimerTour(t.id), 'Tour supprimé.')}>Supprimer</button>`}</span>`}
     </li>`)}</ul>`}
