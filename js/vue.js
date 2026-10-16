@@ -43,6 +43,8 @@ export function construireContexte(data, session) {
     clubs,
     clubParId,
     licencies: liste,
+    /** Fiches que l'utilisateur gère vraiment (hors annuaire restreint du juge-arbitre). */
+    licenciesGeres: liste.filter((l) => !l.annuaire),
     licencieParId: new Map(liste.map((l) => [l.id, l])),
     roles,
     competitions: competitions.slice().sort((a, b) => b.date_debut.localeCompare(a.date_debut)),
@@ -77,6 +79,10 @@ export function construireContexte(data, session) {
     clubsResponsable,
     estResponsable: clubsResponsable.length > 0,
     estJuge: !!moi && juges.some((j) => j.licencie_id === moi.id),
+    /** Le juge-arbitre gère les compétitions dont il est juge ; le cadre fédéral toutes. */
+    estJugeDe: (compId) => !!moi && juges.some((j) => j.competition_id === compId && j.licencie_id === moi.id),
+    peutGererComp: (compId) => estCadre || (!!moi && juges.some((j) => j.competition_id === compId && j.licencie_id === moi.id)),
+    peutCreerComp: estCadre || (!!moi && juges.some((j) => j.licencie_id === moi.id)),
     // Juge-arbitre sans rôle de cadre ni de responsable : accès limité aux compétitions, au calendrier et au classement
     estJugeSeul: !!moi && juges.some((j) => j.licencie_id === moi.id) && !estCadre && clubsResponsable.length === 0,
     aujourdhui: aujourdhuiISO()

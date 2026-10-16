@@ -182,7 +182,7 @@ export function CarteMatchs({ ctx, c }) {
 export function CarteJuges({ ctx, c }) {
   const [ajout, setAjout] = useState(null);
   const [occupe, setOccupe] = useState(false);
-  if (!ctx.estCadre || c.statut === 'brouillon') return null;
+  if (!ctx.peutGererComp(c.id)) return null;
   const juges = ctx.juges.filter((j) => j.competition_id === c.id);
   const options = ctx.licencies.filter((l) => !juges.some((j) => j.licencie_id === l.id))
     .map((l) => ({ id: l.id, libelle: nomComplet(l), detail: l.clubNom, cle: norm(`${l.prenom} ${l.nom}`) }));
@@ -195,7 +195,7 @@ export function CarteJuges({ ctx, c }) {
     ${juges.length === 0 ? html`<p class="aide">Aucun juge-arbitre désigné. Il saisira les scores une fois les inscriptions closes.</p>` : html`<ul class="historique">
       ${juges.map((j) => html`<li key=${j.id}><strong style="flex:1">${nomJ(ctx, j.licencie_id)}</strong>
         <button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => agir(() => api.retirerJuge(j.id), 'Juge retiré.')}>Retirer</button></li>`)}</ul>`}
-    <${Champ} id="j-ajout" libelle="Désigner un juge-arbitre" aide="Il doit avoir un compte de connexion pour saisir les scores.">
+    <${Champ} id="j-ajout" libelle="Désigner un juge-arbitre" aide="Il doit avoir un compte de connexion pour saisir les scores. Tu peux aussi retirer un juge, mais il en faut toujours au moins un.">
       <${ChoixPersonne} id="j-ajout" options=${options} valeur=${ajout} onChange=${setAjout} /><//>
     <div class="actions"><button class="btn btn-primaire" type="button" disabled=${!ajout || occupe} onClick=${() => agir(() => api.ajouterJuge(c.id, ajout), 'Juge désigné.')}>Désigner</button></div>
   </section>`;

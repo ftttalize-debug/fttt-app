@@ -55,7 +55,18 @@ export async function chargerTout() {
     const { data, error } = await sb.from('parametres').select('*');
     if (!error && data) parametres = Object.fromEntries(data.map((r) => [r.cle, r.valeur]));
   } catch { /* table absente ou non autorisée : valeurs par défaut */ }
-  return { saisons, clubs, licencies, licences, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, mouvements, rencontres, compositions, tours, parametres };
+  // Juge-arbitre : annuaire restreint (sans contact) pour inscrire des joueurs et désigner des juges.
+  let licenciesTous = licencies, licencesTous = licences;
+  try {
+    const { data: ann, error } = await sb.rpc('annuaire_juge');
+    if (!error && ann && ann.licencies && ann.licencies.length) {
+      const connus = new Set(licencies.map((l) => l.id));
+      licenciesTous = licencies.concat(ann.licencies.filter((l) => !connus.has(l.id)).map((l) => ({ ...l, annuaire: true })));
+      const lcConnus = new Set(licences.map((x) => x.id));
+      licencesTous = licences.concat(ann.licences.filter((x) => !lcConnus.has(x.id)));
+    }
+  } catch { /* script 047 pas encore exécuté ou accès refusé : on garde les données habituelles */ }
+  return { saisons, clubs, licencies: licenciesTous, licences: licencesTous, roles, competitions, inscriptions, participants, factures, matchs, pmatchs, manches, juges, mouvements, rencontres, compositions, tours, parametres };
 }
 
 /** Exige qu'au moins une ligne ait été modifiée (sinon les droits ont refusé en silence). */
@@ -168,11 +179,8 @@ export const api = {
     appeler('enregistrer_inscription', { p_competition: competition, p_club: club, p_joueurs: joueurs, p_inscription: inscription, ...(nomEquipe ? { p_nom_equipe: nomEquipe } : {}) }),
   annulerInscription: (id) => appeler('annuler_inscription', { p_inscription: id }),
 
-  creerCompetition: async (c) => {
-    const { data, error } = await sb.from('competitions').insert(c).select();
-    if (error) throw error;
-    return data[0];
-  },
+  // Création par fonction : le juge-arbitre devient juge de sa compétition (brouillon, coefficient fixé par la fédération).
+  creerCompetition: async (c) => ({ id: await appeler('creer_competition_juge', { p: c }) }),
   creerTableaux: (modele, tableaux) => appeler('creer_tableaux', { p_modele: modele, p_tableaux: tableaux }),
   changerStatutEvenement: (competition, statut) => appeler('changer_statut_evenement', { p_competition: competition, p_statut: statut }),
   supprimerEvenement: (competition) => appeler('supprimer_evenement', { p_competition: competition }),

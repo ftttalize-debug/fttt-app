@@ -63,6 +63,7 @@ function DialogueReprise({ ctx, onFermer }) {
 export function PageCompetitions({ ctx, route }) {
   const [reprise, setReprise] = useState(false);
   const { competitions, estCadre } = ctx;
+  const voitBrouillons = estCadre || ctx.estJuge;
   const statut = route.query.statut || 'toutes';
   // À venir (ou en cours) d'abord, de la plus proche à la plus lointaine ; puis les passées, de la plus récente à la plus ancienne
   const auj = aujourdhuiISO();
@@ -72,12 +73,12 @@ export function PageCompetitions({ ctx, route }) {
     ...filtrees.filter((c) => c.date_fin < auj).sort((x, y) => String(y.date_debut).localeCompare(String(x.date_debut)))
   ];
   const puces = [['toutes', 'Toutes'], ['ouverte', 'Ouvertes'], ['cloturee', 'Closes'], ['terminee', 'Terminées']];
-  if (estCadre) puces.splice(1, 0, ['brouillon', 'Brouillons']);
+  if (voitBrouillons) puces.splice(1, 0, ['brouillon', 'Brouillons']);
   return html`<div class="page">
     <div class="page-tete">
       <div><h1>Compétitions</h1><p>${competitions.length} compétition${competitions.length > 1 ? 's' : ''}</p></div>
-      ${estCadre && html`<div class="page-actions"><a class="btn btn-primaire" href=${lien(['competitions', 'nouveau'])}><${Icone} nom="plus" taille=${20} /> Nouvelle compétition</a>
-        <button class="btn btn-secondaire" type="button" onClick=${() => setReprise(true)}>Reprendre une saison</button></div>`}
+      ${ctx.peutCreerComp && html`<div class="page-actions"><a class="btn btn-primaire" href=${lien(['competitions', 'nouveau'])}><${Icone} nom="plus" taille=${20} /> Nouvelle compétition</a>
+        ${estCadre && html`<button class="btn btn-secondaire" type="button" onClick=${() => setReprise(true)}>Reprendre une saison</button>`}</div>`}
     </div>
     <div class="puces" role="group" aria-label="Statut">
       ${puces.map(([v, label]) => html`<button key=${v} type="button" class="puce" aria-pressed=${statut === v}
@@ -160,7 +161,7 @@ function Formulaire({ ctx, c }) {
   useEffect(() => { if (c) setF(depuis(c)); }, [c]);
   const maj = (p) => setF((x) => ({ ...x, ...p }));
   const modifie = nouveau || JSON.stringify(norme(f)) !== JSON.stringify(norme(depuis(c)));
-  const peut = ctx.estCadre;
+  const peut = nouveau ? ctx.peutCreerComp : ctx.estCadre || (ctx.peutGererComp(c.id) && c.statut !== 'terminee');
 
   async function enregistrer(e) {
     e.preventDefault();
@@ -214,8 +215,8 @@ function Formulaire({ ctx, c }) {
         <select id="p-cat" disabled=${dis} value=${f.categorie_min ? 'VET' : f.categorie_max} onChange=${(e) => maj(e.target.value === 'VET' ? { categorie_min: 'veteran', categorie_max: '' } : { categorie_min: '', categorie_max: e.target.value })}>
           ${Object.entries(CATEGORIES_MAX).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
         </select><//>
-      <${Champ} id="p-coef" libelle="Coefficient" aide="Multiplie les points gagnés ou perdus à chaque match.">
-        <select id="p-coef" disabled=${dis} value=${f.coefficient} onChange=${(e) => maj({ coefficient: e.target.value })}>
+      <${Champ} id="p-coef" libelle="Coefficient" aide=${ctx.estCadre ? 'Multiplie les points gagnés ou perdus à chaque match.' : 'Fixé par la fédération (1 à la création).'}>
+        <select id="p-coef" disabled=${dis || !ctx.estCadre} value=${f.coefficient} onChange=${(e) => maj({ coefficient: e.target.value })}>
           ${COEFS.map((k) => html`<option key=${k} value=${k}>${Number(k).toLocaleString('fr-FR')}</option>`)}
         </select><//>
       <${Champ} id="p-pmax" libelle="Points maximum (classement)" aide="Vide = aucune limite. Ex. 599 : seuls les joueurs de 599 points et moins peuvent s'inscrire." erreur=${erreurs.points_max}>
@@ -242,7 +243,7 @@ function Formulaire({ ctx, c }) {
 function Etat({ ctx, c }) {
   const [occupe, setOccupe] = useState(false);
   const [suppr, setSuppr] = useState(false);
-  const freres = c.evenement_id ? ctx.competitions.filter((x) => x.evenement_id === c.evenement_id && x.statut === c.statut) : [];
+  const freres = ctx.estCadre && c.evenement_id ? ctx.competitions.filter((x) => x.evenement_id === c.evenement_id && x.statut === c.statut) : [];
   const [tous, setTous] = useState(true);
   async function changer(statut, message) {
     setOccupe(true);
@@ -289,9 +290,9 @@ function Etat({ ctx, c }) {
       ${c.statut === 'brouillon' && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => changer('ouverte', 'Inscriptions ouvertes.')}>Ouvrir les inscriptions</button>
         <button class="btn btn-danger" type="button" disabled=${occupe} onClick=${() => setSuppr(true)}>Supprimer</button>`}
       ${c.statut === 'ouverte' && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => changer('cloturee', 'Inscriptions closes.')}>Clôturer les inscriptions</button>`}
-      ${c.statut === 'cloturee' && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => changer('terminee', 'Compétition terminée.')}>Marquer comme terminée</button>
+      ${c.statut === 'cloturee' && html`${ctx.estCadre && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => changer('terminee', 'Compétition terminée.')}>Marquer comme terminée</button>`}
         <button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => changer('ouverte', 'Inscriptions rouvertes.')}>Rouvrir les inscriptions</button>`}
-      ${c.statut === 'terminee' && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => changer('cloturee', 'Compétition réouverte aux scores.')}>Revenir à « inscriptions closes »</button>`}
+      ${c.statut === 'terminee' && ctx.estCadre && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => changer('cloturee', 'Compétition réouverte aux scores.')}>Revenir à « inscriptions closes »</button>`}
     </div>
     ${suppr && html`<${Dialogue} titre=${freres.length > 1 && tous ? 'Supprimer tout l\'événement ?' : 'Supprimer ce brouillon ?'} onFermer=${() => setSuppr(false)}>
       <p>${freres.length > 1 && tous ? `« ${c.nom} » et les ${freres.length - 1} autres tableaux en brouillon de l'événement seront supprimés définitivement.` : `« ${c.nom} » sera supprimée définitivement.`}</p>
@@ -364,14 +365,14 @@ export function PageCompetition({ ctx, id }) {
   if (id !== 'nouveau' && !c) {
     return html`<div class="page"><a class="retour" href=${lien(['competitions'])}><${Icone} nom="retour" taille=${20} /> Compétitions</a><p class="vide">Compétition introuvable.</p></div>`;
   }
-  if (id === 'nouveau' && !ctx.estCadre) {
-    return html`<div class="page"><p class="vide">Seul le cadre fédéral peut créer une compétition.</p></div>`;
+  if (id === 'nouveau' && !ctx.peutCreerComp) {
+    return html`<div class="page"><p class="vide">Seuls le cadre fédéral et les juges-arbitres peuvent créer une compétition.</p></div>`;
   }
   return html`<div class="page">
     <a class="retour" href=${lien(['competitions'])}><${Icone} nom="retour" taille=${20} /> Compétitions</a>
     <div class="page-tete"><div><h1>${c ? c.nom : 'Nouvelle compétition'}</h1>
       ${c && html`<p>${dates(c)}${c.lieu ? ' · ' + c.lieu : ''} · ${TYPES_COMP[c.type]} · Coef. ${Number(c.coefficient).toLocaleString('fr-FR')} · ${fmtXpf(c.montant_xpf)} par ${c.type === 'equipe' ? 'équipe' : 'participant'}</p>`}</div></div>
-    ${c && ctx.estCadre && html`<${Etat} ctx=${ctx} c=${c} />`}
+    ${c && ctx.peutGererComp(c.id) && html`<${Etat} ctx=${ctx} c=${c} />`}
     ${c && (ctx.estCadre || c.evenement_id) && html`<${CarteTableaux} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteInscriptions} ctx=${ctx} c=${c} />`}
     ${c && c.type !== 'equipe' && html`<${CarteMatchs} ctx=${ctx} c=${c} />`}

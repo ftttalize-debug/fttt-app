@@ -42,11 +42,11 @@ export function PageCertificats({ ctx }) {
   const [texte, setTexte] = useState('');
   const aujourdhui = aujourdhuiISO();
 
-  const toutes = useMemo(() => ctx.licencies
+  const toutes = useMemo(() => ctx.licenciesGeres
     .map((l) => ({ l, etat: etatCertificat(l, aujourdhui) }))
     .filter((x) => x.etat)
     .sort((a, b) => ORDRE[a.etat.code] - ORDRE[b.etat.code] || (a.etat.fin || '').localeCompare(b.etat.fin || '') || norm(a.l.nom).localeCompare(norm(b.l.nom))),
-  [ctx.licencies]);
+  [ctx.licenciesGeres]);
 
   const compte = (c) => toutes.filter((x) => x.etat.code === c).length;
   const liste = toutes.filter((x) => (filtre === 'tous' || x.etat.code === filtre)

@@ -195,7 +195,7 @@ export function PageClub({ ctx, id }) {
   if (id === 'nouveau' && !ctx.estCadre) {
     return html`<div class="page"><p class="vide">Seul le cadre fédéral peut créer un club.</p></div>`;
   }
-  const membres = club ? ctx.licencies.filter((l) => l.club_id === club.id) : [];
+  const membres = club ? ctx.licenciesGeres.filter((l) => l.club_id === club.id) : [];
   const actifs = membres.filter((l) => l.statut === 'actif').length;
   return html`<div class="page">
     <a class="retour" href=${lien(['clubs'])}><${Icone} nom="retour" taille=${20} /> Clubs</a>

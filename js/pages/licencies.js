@@ -7,7 +7,7 @@ const PAGE = 40;
 const repManquant = (l) => l.statut === 'actif' && estMineur(l.date_naissance) && !l.representant_legal_id && !l.representant_nom;
 
 export function PageLicencies({ ctx, route }) {
-  const { licencies, clubs, saison, estCadre } = ctx;
+  const { licenciesGeres: licencies, clubs, saison, estCadre } = ctx;
   const q = route.query;
   const statut = q.statut || 'tous';
   const [texte, setTexte] = useState('');

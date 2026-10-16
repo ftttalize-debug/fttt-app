@@ -5,7 +5,7 @@ import { Pastille } from '../ui.js';
 import { etatCertificat } from './certificats.js';
 
 export function PageAccueil({ ctx }) {
-  const { saison, licencies, moi, estCadre, estResponsable, clubs } = ctx;
+  const { saison, licenciesGeres: licencies, moi, estCadre, estResponsable, clubs } = ctx;
 
   if (ctx.estJugeSeul) {
     const auj = aujourdhuiISO();
@@ -20,7 +20,8 @@ export function PageAccueil({ ctx }) {
         ${aVenir.length === 0 ? html`<p class="vide">Aucune compétition à venir où tu es désigné(e) juge-arbitre.</p>` : html`<ul class="liste-simple">
           ${aVenir.map((c) => html`<li key=${c.id}><a href=${lien(['competitions', c.id])}><strong>${c.nom}</strong></a> · ${c.date_debut === c.date_fin ? fmtDate(c.date_debut) : `${fmtDate(c.date_debut)} au ${fmtDate(c.date_fin)}`}</li>`)}
         </ul>`}
-        <div class="actions"><a class="btn btn-primaire" href=${lien(['competitions'])}>Toutes les compétitions</a></div>
+        <div class="actions"><a class="btn btn-primaire" href=${lien(['competitions'])}>Toutes les compétitions</a>
+          <a class="btn btn-secondaire" href=${lien(['competitions', 'nouveau'])}>Nouvelle compétition</a></div>
       </div>
     </div>`;
   }
