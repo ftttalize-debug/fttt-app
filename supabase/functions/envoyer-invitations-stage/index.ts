@@ -42,7 +42,7 @@ Deno.serve(async () => {
 <p>L'inscription se fait en quelques minutes, sans compte : <a href="${LIEN}">${LIEN}</a><br>
 Il suffit de saisir vos coordonnées et celles de votre enfant, puis de cocher le stage. Une fiche d'inscription déjà remplie vous sera proposée : il ne reste qu'à la signer.</p>
 <p>Tarif : ${s.tarif_licencie.toLocaleString('fr-FR')} XPF pour un licencié, ${s.tarif_non_licencie.toLocaleString('fr-FR')} XPF sinon (licence événementielle incluse). Un certificat médical d'aptitude est à remettre le premier jour, sauf pour les licenciés.</p>
-<p>Cordialement,<br>Fédération Tahitienne de Tennis de Table</p>`;
+<p>Cordialement,<br>Fédération Tahitienne de Tennis de Table<br>fttt.secretariat@gmail.com</p>`;
     try {
       const rep = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
