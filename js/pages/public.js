@@ -3,7 +3,7 @@
 import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
 import { norm, fmtPts, fmtVariation, CATEGORIES, msgErreur, lien, telechargerCsv } from '../lib.js';
-import { Chargement } from '../ui.js';
+import { Chargement, BadgePts } from '../ui.js';
 import { ListeMatchs, bilanHisto } from './joueur.js';
 
 const libelleMois = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -87,7 +87,7 @@ export function Noms({ r }) {
 
 function PointsCote({ r }) {
   if (r.points === null || r.points === undefined) return null;
-  return html`<small class=${'pts-cote ' + (Number(r.points) >= 0 ? 'gain' : 'perte')}>${fmtVariation(r.points)} pts</small>`;
+  return html`<span class="pts-cote"><${BadgePts} v=${r.points} /></span>`;
 }
 
 function ResultatsJoueur() {

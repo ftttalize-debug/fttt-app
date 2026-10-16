@@ -34,6 +34,14 @@ export function Pastille({ genre = 'neutre', children }) {
   return html`<span class=${'pastille pastille-' + genre}>${children}</span>`;
 }
 
+// Points gagnés ou perdus sur un match : pastille verte (gain) ou rouge (perte), bien distincte du score.
+export function BadgePts({ v }) {
+  if (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) return null;
+  const n = Number(v);
+  const txt = (n > 0 ? '+' : '') + n.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' pts';
+  return html`<span class=${'pts-badge ' + (n > 0 ? 'gain' : n < 0 ? 'perte' : 'neutre')} title=${n > 0 ? 'Points gagnés' : n < 0 ? 'Points perdus' : 'Aucun point'}>${txt}</span>`;
+}
+
 export function Chargement({ texte = 'Chargement…' }) {
   return html`<p class="chargement" role="status">${texte}</p>`;
 }

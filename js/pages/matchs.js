@@ -2,7 +2,7 @@
 import { html, useState, useMemo } from '../preact.js';
 import { api } from '../data.js';
 import { norm, nomComplet, fmtPts, msgErreur } from '../lib.js';
-import { Pastille, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
+import { Pastille, BadgePts, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
 
 const STATUT = { saisi: 'À valider', valide: 'Validé', rejete: 'À corriger' };
 const GENRE = { saisi: 'alerte', valide: 'actif', rejete: 'archive' };
@@ -149,8 +149,9 @@ export function LigneMatch({ ctx, c, m, peutSaisir, onEdit }) {
       <span class=${!gagnantA ? 'gagnant' : ''}>${cote(ctx, m.B)}</span>
     </div>
     <small>${m.forfait_cote ? `Forfait ${m.forfait_cote === 'A' ? 'du côté A' : 'du côté B'} (aucun point)` : `${m.manches.map((x) => `${x.score_a}-${x.score_b}`).join(', ')} · en ${m.sets_gagnants} sets gagnants`}</small>
-    ${m.statut === 'valide' && m.type_match === 'simple' && a && b && a.points_finaux !== null && html`<small>
-      Points : ${nomJ(ctx, a.licencie_id)} ${signe(a.points_finaux)} · ${nomJ(ctx, b.licencie_id)} ${signe(b.points_finaux)}</small>`}
+    ${m.statut === 'valide' && m.type_match === 'simple' && a && b && a.points_finaux !== null && html`<div class="pts-ligne">
+      <span>${nomJ(ctx, a.licencie_id)} <${BadgePts} v=${a.points_finaux} /></span>
+      <span>${nomJ(ctx, b.licencie_id)} <${BadgePts} v=${b.points_finaux} /></span></div>`}
     <div class="etiquettes">
       ${peutSaisir && m.statut !== 'valide' && html`<button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => onEdit(m)}>Corriger</button>
         <button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => act(() => api.supprimerMatch(m.id), 'Match supprimé.')}>Supprimer</button>`}
@@ -229,7 +230,8 @@ export function HistoriqueMatchs({ ctx, l }) {
           <div class="match-tete"><strong>${comp?.nom || '—'}</strong>${m.tour ? html`<small>${m.tour}</small>` : ''}
             <${Pastille} genre=${mesSets > sesSets ? 'actif' : 'archive'}>${mesSets > sesSets ? 'Victoire' : 'Défaite'}<//></div>
           <div>contre ${cote(ctx, adverse)} · <strong>${mesSets} - ${sesSets}</strong></div>
-          <small>${m.forfait_cote ? 'Forfait (aucun point)' : m.manches.map((x) => (moi.cote === 'A' ? `${x.score_a}-${x.score_b}` : `${x.score_b}-${x.score_a}`)).join(', ')}${moi.points_finaux !== null && m.type_match === 'simple' ? ' · ' + signe(moi.points_finaux) + ' pts' : ''}</small>
+          <small>${m.forfait_cote ? 'Forfait (aucun point)' : m.manches.map((x) => (moi.cote === 'A' ? `${x.score_a}-${x.score_b}` : `${x.score_b}-${x.score_a}`)).join(', ')}</small>
+          ${moi.points_finaux !== null && m.type_match === 'simple' && !m.forfait_cote && html`<div class="pts-ligne"><${BadgePts} v=${moi.points_finaux} /> <small>sur votre classement</small></div>`}
         </li>`;
       })}
     </ul>

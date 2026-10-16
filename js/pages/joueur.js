@@ -2,7 +2,7 @@
 import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
 import { fmtPts, fmtVariation, fmtDate, msgErreur, lien } from '../lib.js';
-import { Chargement, Pastille } from '../ui.js';
+import { Chargement, Pastille, BadgePts } from '../ui.js';
 
 
 export function bilanHisto(histo) {
@@ -34,7 +34,7 @@ export function ListeMatchs({ histo }) {
             <span class=${'pastille ' + (gagne ? 'pastille-actif' : 'pastille-alerte')}>${gagne ? 'Victoire' : 'Défaite'}</span></div>
           <div class="match-score"><span>contre ${(h.liste || []).map((a, i) => html`${i > 0 ? ' / ' : ''}${a.id ? html`<a class="lien-joueur" href=${lien(['joueur', a.id])}>${a.nom}</a>` : a.nom}`)}</span>
             <strong>${h.sets_pour} - ${h.sets_contre}</strong>
-            <span class=${h.points === null ? '' : h.points >= 0 ? 'gain' : 'perte'}>${h.points === null ? '' : fmtVariation(h.points) + ' pts'}</span></div>
+            <${BadgePts} v=${h.points} /></div>
           <small>${h.manches || 'Forfait'}</small></li>`;
       })}</ul></section>`)}
   </div>`;
