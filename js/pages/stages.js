@@ -193,7 +193,7 @@ function Formulaire({ stages, preselection, onFait }) {
             </div>
             <p class="comp-date">${quand(s)}${s.lieu ? ' · ' + s.lieu : ''}</p>
             <p class="comp-infos">Licencié(e) FTTT : ${xpf(s.tarif_licencie)} · Non licencié(e) : ${xpf(s.tarif_non_licencie)}</p>
-            ${complet ? html`<${Pastille} genre="alerte">Complet : liste d'attente<//>` : html`<${Pastille} genre="actif">${restantes} place${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}<//>`}
+            ${complet && html`<${Pastille} genre="alerte">Complet : liste d'attente<//>`}
           </li>`;
         })}</ul>`}
       ${erreurs.stages && html`<p class="erreur" role="alert">${erreurs.stages}</p>`}
