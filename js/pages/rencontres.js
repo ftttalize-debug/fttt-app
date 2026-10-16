@@ -186,7 +186,7 @@ export function CarteTours({ ctx, c }) {
     ? agir(() => api.modifierTour(dialogue.tour.id, nom.trim(), date), 'Tour modifié.')
     : agir(() => api.creerTour(c.id, nom.trim(), date), 'Tour ajouté.'));
   const nbRencontres = (t) => ctx.rencontres.filter((r) => r.competition_id === c.id && r.tour === t.nom).length;
-  return html`<${Pliable} titre="Tours et dates (gérer les journées)" ouvert=${false}>
+  return html`<${Pliable} titre="Gérer les journées" ouvert=${false}>
     <p class="aide">Une compétition par équipes se joue en plusieurs tours, chacun à sa date (du ${fmtDate(c.date_debut)} au ${fmtDate(c.date_fin)}). Les rencontres se rattachent à un tour.</p>
     ${tours.length === 0 ? html`<p class="aide">Aucun tour défini.</p>` : html`<ul class="historique">${tours.map((t) => html`<li key=${t.id}>
       <span style="flex:1"><strong>${t.nom}</strong> · ${fmtDate(t.date_tour)}<small> ${nbRencontres(t)} rencontre${nbRencontres(t) > 1 ? 's' : ''}</small></span>
