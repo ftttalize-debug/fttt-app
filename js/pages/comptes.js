@@ -1,5 +1,5 @@
 // Comptes et accès (cadre fédéral) : qui peut se connecter, avec quels rôles.
-import { html, useState, useMemo } from '../preact.js';
+import { html, useState, useMemo, useEffect } from '../preact.js';
 import { api } from '../data.js';
 import { lien, nomComplet, norm, estMineur, msgErreur } from '../lib.js';
 import { Pastille, Dialogue, ChoixPersonne, Champ, toast } from '../ui.js';
@@ -22,6 +22,9 @@ export function PageComptes({ ctx }) {
   const [occupe, setOccupe] = useState(false);
   const [aRetirer, setARetirer] = useState(null);
   const [aDelier, setADelier] = useState(null);
+  // Seul l'administrateur des comptes modifie les accès (script 037) ; les autres cadres consultent. Le serveur refuse de toute façon.
+  const [admin, setAdmin] = useState(true);
+  useEffect(() => { api.estAdminComptes().then(setAdmin).catch(() => {}); }, []);
 
   const adultes = useMemo(() => ctx.licencies
     .filter((l) => !estMineur(l.date_naissance))
@@ -78,7 +81,8 @@ export function PageComptes({ ctx }) {
     <div class="page-tete"><div><h1>Comptes et accès</h1>
       <p>${ctx.licencies.filter((l) => l.user_id).length} compte${ctx.licencies.filter((l) => l.user_id).length > 1 ? 's' : ''} actif${ctx.licencies.filter((l) => l.user_id).length > 1 ? 's' : ''}</p></div></div>
 
-    <section class="carte" aria-label="Donner un accès">
+    ${!admin && html`<p class="avis">Seul l'administrateur des comptes peut donner, retirer ou détacher un accès. Tu peux consulter la liste.</p>`}
+    <section class="carte" aria-label="Donner un accès" hidden=${!admin}>
       <h2>Donner un accès</h2>
       <p class="aide">Renseigne d'abord l'e-mail sur la fiche. La personne crée ensuite son compte depuis l'écran de connexion (« Créer mon compte ») avec cet e-mail : sa fiche est reliée automatiquement. Les juges-arbitres sont désignés sur chaque compétition.</p>
       <div class="grille">
@@ -120,12 +124,12 @@ export function PageComptes({ ctx }) {
               <div class="aide">${l.email || 'sans e-mail'}</div>
               <div class="puces">
                 ${roles.map((r) => html`<span key=${r.id}><${Pastille}>${ROLES[r.role]}${r.club_id ? ' · ' + (ctx.clubParId.get(r.club_id)?.nom || '') : ''}<//>
-                  <button class="btn btn-lien" type="button" aria-label=${'Retirer ' + ROLES[r.role]} onClick=${() => setARetirer(r)}>Retirer</button></span>`)}
+                  ${admin && html`<button class="btn btn-lien" type="button" aria-label=${'Retirer ' + ROLES[r.role]} onClick=${() => setARetirer(r)}>Retirer</button>`}</span>`)}
                 ${nbJuge > 0 && html`<${Pastille}>Juge sur ${nbJuge} compétition${nbJuge > 1 ? 's' : ''}<//>`}
               </div>
             </div>
             <${Pastille} genre=${e.genre}>${e.texte}<//>
-            ${l.user_id && !moi && html`<button class="btn btn-secondaire" type="button" onClick=${() => setADelier(l)}>Détacher le compte</button>`}
+            ${admin && l.user_id && !moi && html`<button class="btn btn-secondaire" type="button" onClick=${() => setADelier(l)}>Détacher le compte</button>`}
           </li>`;
         })}
       </ul>`}

@@ -80,6 +80,7 @@ export const api = {
   },
   lierMonCompte: () => appeler('lier_mon_compte', {}),
   delierCompte: (id) => appeler('delier_compte', { p_licencie: id }),
+  estAdminComptes: () => appeler('est_admin_comptes', {}),
   cloturerMois: (mois) => appeler('cloturer_mois', { p_mois: mois }),
   passerSaison: () => appeler('passer_saison', {}),
   moisPublies: () => appeler('mois_publies', {}),
