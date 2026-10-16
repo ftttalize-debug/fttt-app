@@ -1,9 +1,9 @@
 -- =====================================================================
--- FTTT – Script 054 : championnats par équipes — chaque validation part des points À JOUR
+-- FTTT – Script 054 : championnats par équipes — le barème part des points d'AVANT la date de la journée
 -- À exécuter après 053. Relançable.
--- Les rencontres d'un championnat par équipes pouvant être séparées de plusieurs mois, le barème
--- s'applique aux points que les joueurs ont au moment de la validation (points des journées précédentes inclus).
--- Les matchs validés ensemble partent tous des mêmes points (ceux d'avant cette validation).
+--  · Toutes les rencontres d'un même jour (Élite, D2…) partent des mêmes points, quel que soit l'ordre
+--    ou le moment où tu valides : les points déjà appliqués ce jour-là sont retirés du calcul.
+--  · Une journée plus tardive part des points à jour (résultats des journées précédentes inclus).
 -- Compétitions individuelles et doubles : inchangé (points figés à la clôture des inscriptions).
 -- =====================================================================
 begin;
@@ -17,6 +17,7 @@ declare
   v_nb integer := 0;
   v_vict_a boolean;
   v_ref_a numeric; v_ref_b numeric;
+  v_date date;
 begin
   if not est_cadre() then raise exception 'Réservé au cadre fédéral'; end if;
   select * into c from competitions where id = p_competition;
@@ -30,14 +31,31 @@ begin
       select * into pa from participants_match where match_id = m.id and cote = 'A';
       select * into pb from participants_match where match_id = m.id and cote = 'B';
       v_vict_a := pa.sets_gagnes > pb.sets_gagnes;
-      select case when c.type = 'equipe' then l.points else coalesce(ip.points_reference, l.points) end into v_ref_a
+      select coalesce(ip.points_reference, l.points) into v_ref_a
         from licencies l left join (select ip2.licencie_id, ip2.points_reference from inscription_participants ip2
               join inscriptions i2 on i2.id = ip2.inscription_id where i2.competition_id = p_competition and i2.statut = 'active') ip
           on ip.licencie_id = l.id where l.id = pa.licencie_id;
-      select case when c.type = 'equipe' then l.points else coalesce(ip.points_reference, l.points) end into v_ref_b
+      select coalesce(ip.points_reference, l.points) into v_ref_b
         from licencies l left join (select ip2.licencie_id, ip2.points_reference from inscription_participants ip2
               join inscriptions i2 on i2.id = ip2.inscription_id where i2.competition_id = p_competition and i2.statut = 'active') ip
           on ip.licencie_id = l.id where l.id = pb.licencie_id;
+
+      -- Championnat par équipes : points d'AVANT la date de la rencontre.
+      -- Les rencontres d'un même jour partent des mêmes points (quel que soit l'ordre de validation) ;
+      -- une journée plus tardive part des points à jour, résultats des journées précédentes inclus.
+      if c.type = 'equipe' then
+        select r.date_rencontre into v_date from rencontres r where r.id = m.rencontre_id;
+        if v_date is not null then
+          select l.points - coalesce((select sum(mp.points) from mouvements_points mp
+                   join matchs m2 on m2.id = mp.match_id join rencontres r2 on r2.id = m2.rencontre_id
+                  where mp.licencie_id = l.id and mp.applique and r2.date_rencontre >= v_date), 0)
+            into v_ref_a from licencies l where l.id = pa.licencie_id;
+          select l.points - coalesce((select sum(mp.points) from mouvements_points mp
+                   join matchs m2 on m2.id = mp.match_id join rencontres r2 on r2.id = m2.rencontre_id
+                  where mp.licencie_id = l.id and mp.applique and r2.date_rencontre >= v_date), 0)
+            into v_ref_b from licencies l where l.id = pb.licencie_id;
+        end if;
+      end if;
 
       update participants_match set points_avant = v_ref_a, ecart = v_ref_b - v_ref_a,
              points_bruts = points_match(v_ref_b - v_ref_a, v_vict_a, 1),
@@ -65,5 +83,5 @@ end $$;
 revoke execute on function valider_matchs(uuid, uuid[]) from public, anon;
 grant execute on function valider_matchs(uuid, uuid[]) to authenticated;
 
-select 'ok : points à jour pour les équipes' as controle;
+select 'ok : points d''avant la date de la journée' as controle;
 commit;
