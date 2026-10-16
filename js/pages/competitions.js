@@ -2,7 +2,7 @@
 import { html, useState, useEffect } from '../preact.js';
 import { api } from '../data.js';
 import { lien, naviguer, fmtDate, aujourdhuiISO, msgErreur } from '../lib.js';
-import { Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
+import { Pliable, Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { CarteInscriptions } from './inscriptions.js';
 import { CarteFacturation } from './factures.js';
 import { CarteMatchs, CarteJuges } from './matchs.js';
@@ -187,8 +187,7 @@ function Formulaire({ ctx, c }) {
     }
   }
   const dis = !peut;
-  return html`<form class="carte" onSubmit=${enregistrer} noValidate>
-    <h2>Informations</h2>
+  return html`<${Pliable} titre="Informations et réglages" ouvert=${false}><form onSubmit=${enregistrer} noValidate>
     <div class="grille grille-2">
       <div class="plein"><${Champ} id="p-nom" libelle="Nom de la compétition" erreur=${erreurs.nom}>
         <input id="p-nom" type="text" disabled=${dis} value=${f.nom} onInput=${(e) => maj({ nom: e.target.value })} /><//></div>
@@ -237,7 +236,7 @@ function Formulaire({ ctx, c }) {
       <button class="btn btn-primaire" type="submit" disabled=${!modifie || occupe}>${occupe ? 'Enregistrement…' : nouveau ? 'Créer la compétition' : 'Enregistrer'}</button>
       ${nouveau && html`<a class="btn btn-secondaire" href=${lien(['competitions'])}>Annuler</a>`}
     </div>`}
-  </form>`;
+  </form><//>`;
 }
 
 function Etat({ ctx, c }) {
@@ -274,8 +273,7 @@ function Etat({ ctx, c }) {
   }
   const aujourdhui = aujourdhuiISO();
   const limitePassee = c.date_limite_inscription && c.date_limite_inscription < aujourdhui;
-  return html`<section class="carte" aria-label="État de la compétition">
-    <h2>État</h2>
+  return html`<${Pliable} titre="État" ouvert=${true}>
     <p><${Pastille} genre=${GENRE[c.statut]}>${STATUTS[c.statut]}<//></p>
     ${c.statut === 'brouillon' && html`<p class="aide">Invisible des clubs. Ouvre les inscriptions quand les informations sont prêtes.</p>
       ${!c.date_limite_inscription && html`<p class="avis">Pas de date limite : les clubs pourront s'inscrire jusqu'à la clôture.</p>`}
@@ -300,7 +298,7 @@ function Etat({ ctx, c }) {
         <button class="btn btn-danger" type="button" disabled=${occupe} onClick=${supprimer}>Supprimer</button>
         <button class="btn btn-secondaire" type="button" onClick=${() => setSuppr(false)}>Annuler</button>
       </div><//>`}
-  </section>`;
+  <//>`;
 }
 
 const CATS_TABLEAUX = [['', 'Open'], ['VET', 'Vétérans'], ['U19', 'U19'], ['U15', 'U15'], ['U13', 'U13'], ['U12', 'U12'], ['U11', 'U11']];
@@ -334,8 +332,7 @@ function CarteTableaux({ ctx, c }) {
       setOccupe(false);
     }
   }
-  return html`<section class="carte" aria-label="Tableaux">
-    <h2>Tableaux</h2>
+  return html`<${Pliable} titre="Tableaux" ouvert=${false}>
     <p class="aide">Pour un championnat avec plusieurs tableaux (U19, U15, doubles…), chaque tableau est une compétition à part avec ses inscriptions, sa facture et ses scores. Les dates, le lieu, le coefficient et les juges sont copiés depuis celle-ci.</p>
     ${freres.length > 0 && html`<ul class="liste">${freres.map((x) => html`<li key=${x.id}><a class="ligne" style="display:flex" href=${lien(['competitions', x.id])}>
       <span class="ligne-nom"><strong>${x.nom}</strong></span>
@@ -357,7 +354,7 @@ function CarteTableaux({ ctx, c }) {
         <button class="btn btn-primaire" type="button" disabled=${occupe || choisis.length === 0} onClick=${creer}>${occupe ? 'Création…' : 'Créer en brouillon'}</button>
         <button class="btn btn-secondaire" type="button" onClick=${() => setOuvert(false)}>Annuler</button>
       </div><//>`}
-  </section>`;
+  <//>`;
 }
 
 export function PageCompetition({ ctx, id }) {
@@ -373,11 +370,11 @@ export function PageCompetition({ ctx, id }) {
     <div class="page-tete"><div><h1>${c ? c.nom : 'Nouvelle compétition'}</h1>
       ${c && html`<p>${dates(c)}${c.lieu ? ' · ' + c.lieu : ''} · ${TYPES_COMP[c.type]} · Coef. ${Number(c.coefficient).toLocaleString('fr-FR')} · ${fmtXpf(c.montant_xpf)} par ${c.type === 'equipe' ? 'équipe' : 'participant'}</p>`}</div></div>
     ${c && ctx.peutGererComp(c.id) && html`<${Etat} ctx=${ctx} c=${c} />`}
+    ${c && c.type !== 'equipe' && html`<${CarteMatchs} ctx=${ctx} c=${c} />`}
+    ${c && c.type === 'equipe' && html`<${CarteRencontres} ctx=${ctx} c=${c} />`}
+    ${c && c.type === 'equipe' && html`<${CarteTours} ctx=${ctx} c=${c} />`}
     ${c && (ctx.estCadre || c.evenement_id) && html`<${CarteTableaux} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteInscriptions} ctx=${ctx} c=${c} />`}
-    ${c && c.type !== 'equipe' && html`<${CarteMatchs} ctx=${ctx} c=${c} />`}
-    ${c && c.type === 'equipe' && html`<${CarteTours} ctx=${ctx} c=${c} />`}
-    ${c && c.type === 'equipe' && html`<${CarteRencontres} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteJuges} ctx=${ctx} c=${c} />`}
     ${c && html`<${CarteFacturation} ctx=${ctx} c=${c} />`}
     <${Formulaire} ctx=${ctx} c=${c} />

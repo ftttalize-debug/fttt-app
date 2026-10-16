@@ -388,3 +388,17 @@ a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(-
 .stage-ligne.annule { opacity: .6; }
 .stage-contact { font-size: 14px; color: var(--brun-doux); margin: 4px 0 0; }
 .case + .champ { margin-top: 14px; }
+
+/* ---- Blocs pliables ---- */
+.pliable > summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; min-height: 44px; }
+.pliable > summary::-webkit-details-marker { display: none; }
+.pliable > summary::after { content: ''; margin-left: auto; width: 10px; height: 10px; border-right: 2.5px solid var(--indigo); border-bottom: 2.5px solid var(--indigo); transform: rotate(45deg); transition: transform .15s; flex: none; margin-right: 4px; }
+.pliable[open] > summary::after { transform: rotate(-135deg); }
+.pliable > summary h2, .pliable > summary h3 { margin: 0; }
+.pliable-resume { color: var(--brun-doux); white-space: nowrap; margin-left: 4px; }
+.pliable > .pliable-corps { padding-top: 12px; }
+.pliable-petit { border: 1px solid var(--trait); border-radius: 12px; padding: 4px 14px; margin: 10px 0; background: var(--creme); }
+.pliable-petit > summary { min-height: 48px; }
+.pliable-petit > .pliable-corps { padding: 4px 0 12px; }
+.rencontre-tete { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 4px 0; font: inherit; color: inherit; cursor: pointer; }
+.rencontre-tete .match-score { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

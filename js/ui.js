@@ -42,6 +42,15 @@ export function BadgePts({ v }) {
   return html`<span class=${'pts-badge ' + (n > 0 ? 'gain' : n < 0 ? 'perte' : 'neutre')} title=${n > 0 ? 'Points gagnés' : n < 0 ? 'Points perdus' : 'Aucun point'}>${txt}</span>`;
 }
 
+// Bloc pliable : on touche le titre pour ouvrir ou fermer (petit = sous-bloc à l'intérieur d'une carte).
+export function Pliable({ titre, resume, ouvert = false, petit = false, children }) {
+  const T = petit ? 'h3' : 'h2';
+  return html`<details class=${petit ? 'pliable pliable-petit' : 'carte pliable'} open=${ouvert}>
+    <summary><${T}>${titre}<//>${resume ? html`<small class="pliable-resume">${resume}</small>` : ''}</summary>
+    <div class="pliable-corps">${children}</div>
+  </details>`;
+}
+
 export function Chargement({ texte = 'Chargement…' }) {
   return html`<p class="chargement" role="status">${texte}</p>`;
 }

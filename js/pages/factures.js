@@ -2,7 +2,7 @@
 import { html, useState } from '../preact.js';
 import { api } from '../data.js';
 import { lien, naviguer, fmtDate, msgErreur, aujourdhuiISO, telechargerCsv } from '../lib.js';
-import { Icone, Pastille, toast } from '../ui.js';
+import { Icone, Pastille, toast, Pliable } from '../ui.js';
 import { fmtXpf } from './competitions.js';
 import { telechargerFacture } from '../facture-pdf.js';
 
@@ -85,13 +85,12 @@ export function CarteFacturation({ ctx, c }) {
       toast(n === 0 ? 'Aucune nouvelle facture à générer.' : `${n} facture${n > 1 ? 's' : ''} générée${n > 1 ? 's' : ''}.`);
     } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
-  return html`<section class="carte" aria-label="Facturation">
-    <h2>Facturation</h2>
+  return html`<${Pliable} titre="Facturation" ouvert=${false}>
     <p class="aide">${factures.length} facture${factures.length > 1 ? 's' : ''} · ${sans.length} inscription${sans.length > 1 ? 's' : ''} sans facture</p>
     ${c.montant_xpf === 0 && html`<p class="avis">Compétition gratuite : aucune facture n'est créée.</p>`}
     <div class="actions">
       <button class="btn btn-primaire" type="button" disabled=${occupe || c.montant_xpf === 0 || sans.length === 0} onClick=${generer}>${occupe ? 'Génération…' : 'Générer les factures'}</button>
       ${factures.length > 0 && html`<a class="btn btn-secondaire" href=${lien(['factures'], { competition: c.id })}>Voir les factures</a>`}
     </div>
-  </section>`;
+  <//>`;
 }

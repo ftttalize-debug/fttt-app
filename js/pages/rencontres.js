@@ -1,8 +1,8 @@
 // Compétitions par équipes : rencontres par tour, feuille de rencontre (joueurs alignés), matchs, classement des équipes.
 import { html, useState, useMemo } from '../preact.js';
 import { api } from '../data.js';
-import { nomComplet, fmtDate, fmtPts, norm, msgErreur } from '../lib.js';
-import { Pastille, Champ, Dialogue, toast } from '../ui.js';
+import { nomComplet, fmtDate, fmtPts, norm, msgErreur, aujourdhuiISO } from '../lib.js';
+import { Pliable, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { DialogueMatch, LigneMatch } from './matchs.js';
 import { raisonRefus } from './inscriptions.js';
 
@@ -20,9 +20,9 @@ function scoreRencontre(ctx, r) {
   return { a, b, nb: ms.length };
 }
 
-function DialogueRencontre({ ctx, c, equipes, onFermer }) {
+function DialogueRencontre({ ctx, c, equipes, onFermer, tourInitial }) {
   const tours = toursDe(ctx, c);
-  const [tour, setTour] = useState(tours[0]?.nom || '');
+  const [tour, setTour] = useState(tourInitial || tours[0]?.nom || '');
   const date = tours.find((t) => t.nom === tour)?.date_tour || '';
   const [ea, setEa] = useState(equipes[0]?.id || '');
   const [eb, setEb] = useState(equipes[1]?.id || '');
@@ -114,14 +114,14 @@ function Rencontre({ ctx, c, r, peutSaisir }) {
     try { await api.supprimerRencontre(r.id); await ctx.recharger(); toast('Rencontre supprimée.'); } catch (er) { toast(msgErreur(er), 'erreur'); setOccupe(false); }
   }
   return html`<li class="match">
-    <button class="btn btn-lien" type="button" style="text-align:left" aria-expanded=${ouvert} onClick=${() => setOuvert(!ouvert)}>
-      <strong>${r.tour}</strong>${r.date_rencontre ? ` · ${fmtDate(r.date_rencontre)}` : ''}</button>
-    <div class="match-score">
-      <span class=${sc.a > sc.b ? 'gagnant' : ''}>${nomEquipe(ctx, ea)}</span>
-      <strong>${sc.a} - ${sc.b}</strong>
-      <span class=${sc.b > sc.a ? 'gagnant' : ''}>${nomEquipe(ctx, eb)}</span>
-    </div>
-    <small>${sc.nb} match${sc.nb > 1 ? 's' : ''} saisi${sc.nb > 1 ? 's' : ''}${total ? ` sur ${total}` : ''}</small>
+    <button class="rencontre-tete" type="button" aria-expanded=${ouvert} onClick=${() => setOuvert(!ouvert)}>
+      <span class="match-score">
+        <span class=${sc.a > sc.b ? 'gagnant' : ''}>${nomEquipe(ctx, ea)}</span>
+        <strong>${sc.a} - ${sc.b}</strong>
+        <span class=${sc.b > sc.a ? 'gagnant' : ''}>${nomEquipe(ctx, eb)}</span>
+      </span>
+      <small>${sc.nb} match${sc.nb > 1 ? 's' : ''} saisi${sc.nb > 1 ? 's' : ''}${total ? ` sur ${total}` : ''} · ${ouvert ? 'Toucher pour fermer' : 'Toucher pour ouvrir'}</small>
+    </button>
     ${ouvert && html`<div>
       <p class="aide"><strong>${nomEquipe(ctx, ea)}</strong> : ${nomsListe(listeA)}</p>
       <p class="aide"><strong>${nomEquipe(ctx, eb)}</strong> : ${nomsListe(listeB)}</p>
@@ -157,9 +157,9 @@ function Classement({ ctx, c, equipes, rencontres }) {
     return [...t.values()].filter((x) => x.j > 0).sort((x, y) => (y.v + y.n / 2) - (x.v + x.n / 2) || (y.pour - y.contre) - (x.pour - x.contre) || x.nom.localeCompare(y.nom));
   }, [ctx.matchs, ctx.inscriptions, rencontres]);
   if (!lignes.length) return null;
-  return html`<div><h3>Classement des équipes</h3>
+  return html`<${Pliable} petit titre="Classement des équipes" ouvert=${false}>
     <ul class="historique">${lignes.map((x, k) => html`<li key=${x.id}><span style="flex:1"><strong>${k + 1}. ${x.nom}</strong>
-      <small> ${x.j} rencontre${x.j > 1 ? 's' : ''} · ${x.v} V · ${x.n} N · ${x.d} D · matchs ${x.pour}-${x.contre}</small></span></li>`)}</ul></div>`;
+      <small> ${x.j} rencontre${x.j > 1 ? 's' : ''} · ${x.v} V · ${x.n} N · ${x.d} D · matchs ${x.pour}-${x.contre}</small></span></li>`)}</ul><//>`;
 }
 
 /** Tours de la compétition par équipes, chacun avec sa date. */
@@ -181,8 +181,7 @@ export function CarteTours({ ctx, c }) {
     ? agir(() => api.modifierTour(dialogue.tour.id, nom.trim(), date), 'Tour modifié.')
     : agir(() => api.creerTour(c.id, nom.trim(), date), 'Tour ajouté.'));
   const nbRencontres = (t) => ctx.rencontres.filter((r) => r.competition_id === c.id && r.tour === t.nom).length;
-  return html`<section class="carte" aria-label="Tours et dates">
-    <h2>Tours et dates</h2>
+  return html`<${Pliable} titre="Tours et dates (gérer les journées)" ouvert=${false}>
     <p class="aide">Une compétition par équipes se joue en plusieurs tours, chacun à sa date (du ${fmtDate(c.date_debut)} au ${fmtDate(c.date_fin)}). Les rencontres se rattachent à un tour.</p>
     ${tours.length === 0 ? html`<p class="aide">Aucun tour défini.</p>` : html`<ul class="historique">${tours.map((t) => html`<li key=${t.id}>
       <span style="flex:1"><strong>${t.nom}</strong> · ${fmtDate(t.date_tour)}<small> ${nbRencontres(t)} rencontre${nbRencontres(t) > 1 ? 's' : ''}</small></span>
@@ -198,7 +197,7 @@ export function CarteTours({ ctx, c }) {
         <button class="btn btn-primaire" type="button" disabled=${occupe || !nom.trim() || !date} onClick=${enregistrer}>${occupe ? 'Enregistrement…' : 'Enregistrer'}</button>
         <button class="btn btn-secondaire" type="button" onClick=${() => setDialogue(null)}>Annuler</button>
       </div><//>`}
-  </section>`;
+  <//>`;
 }
 
 /** Effectif de chaque équipe, déduit des matchs joués. Le cadre peut retirer un joueur qui n'a aucun match. */
@@ -209,12 +208,12 @@ function Effectifs({ ctx, c, equipes, peut }) {
     setOccupe(true);
     try { await api.retirerJoueurEquipe(i.id, j.licencie_id); await ctx.recharger(); toast('Joueur retiré de l\'effectif.'); } catch (er) { toast(msgErreur(er), 'erreur'); } finally { setOccupe(false); }
   }
-  return html`<div><h3>Effectifs des équipes</h3>
+  return html`<${Pliable} petit titre="Effectifs des équipes" ouvert=${false}>
     <p class="aide">L'effectif se forme au fil des matchs : un joueur qui a joué pour une équipe y reste pour toute la compétition.</p>
     <ul class="historique">${equipes.map((i) => html`<li key=${i.id} style="display:block"><strong>${nomEquipe(ctx, i)}</strong> <small>${ctx.clubParId.get(i.club_id)?.nom || ''}</small>
       ${i.joueurs.length === 0 ? html`<div class="aide">Aucun joueur pour le moment.</div>` : html`<div class="aide">${i.joueurs.map((j, k) => { const l = ctx.licencieParId.get(j.licencie_id);
         return html`${k > 0 ? ', ' : ''}${l ? nomComplet(l) : j.nom_affiche || 'Joueur'}${peut && html` <button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => retirer(i, j)}>retirer</button>`}`; })}</div>`}
-    </li>`)}</ul></div>`;
+    </li>`)}</ul><//>`;
 }
 
 export function CarteRencontres({ ctx, c }) {
@@ -236,18 +235,22 @@ export function CarteRencontres({ ctx, c }) {
       toast(`${nb} match${nb > 1 ? 's' : ''} validé${nb > 1 ? 's' : ''}.`);
     } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
-  return html`<section class="carte" aria-label="Rencontres">
-    <h2>Rencontres par équipes</h2>
-    ${toursDe(ctx, c).length === 0 && peutSaisir && html`<p class="avis">Définis d'abord les tours et leurs dates dans « Tours et dates ».</p>`}
-    <p class="aide">${c.nb_simples != null || c.nb_doubles != null ? `Format : ${c.nb_simples ?? 0} simples et ${c.nb_doubles ?? 0} doubles par rencontre. ` : ''}Chaque match gagné compte pour la rencontre ; seuls les simples donnent des points (coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}), à la validation.</p>
-    ${rencontres.length === 0 ? html`<p class="aide">Aucune rencontre.</p>` : html`<ul class="matchs">${rencontres.map((r) => html`<${Rencontre} key=${r.id} ctx=${ctx} c=${c} r=${r} peutSaisir=${peutSaisir} />`)}</ul>`}
+  const tours = toursDe(ctx, c);
+  const aujourdhui = aujourdhuiISO();
+  const prochain = tours.find((t) => t.date_tour >= aujourdhui) || tours[tours.length - 1];
+  const rencontresDe = (t) => rencontres.filter((r) => r.tour === t.nom);
+  return html`<${Pliable} titre="Journées et rencontres" ouvert=${true}>
+    ${tours.length === 0 && peutSaisir && html`<p class="avis">Définis d'abord les journées et leurs dates dans « Tours et dates ».</p>`}
+    <p class="aide">${c.nb_simples != null || c.nb_doubles != null ? `Format : ${c.nb_simples ?? 0} simples et ${c.nb_doubles ?? 0} doubles par rencontre. ` : ''}Touche une journée pour l'ouvrir, puis une rencontre pour saisir ses matchs. Seuls les simples donnent des points (coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}), à la validation.</p>
+    ${tours.map((t) => html`<${Pliable} key=${t.id} petit titre=${`${t.nom} · ${fmtDate(t.date_tour)}`}
+        resume=${`${rencontresDe(t).length} rencontre${rencontresDe(t).length > 1 ? 's' : ''}`} ouvert=${prochain?.id === t.id}>
+      ${rencontresDe(t).length === 0 ? html`<p class="aide">Aucune rencontre pour cette journée.</p>` : html`<ul class="matchs">${rencontresDe(t).map((r) => html`<${Rencontre} key=${r.id} ctx=${ctx} c=${c} r=${r} peutSaisir=${peutSaisir} />`)}</ul>`}
+      ${peutSaisir && html`<div class="actions"><button class="btn btn-primaire" type="button" disabled=${equipes.length < 2} onClick=${() => setDialogue(t.nom)}>Nouvelle rencontre · ${t.nom}</button></div>`}
+    <//>`)}
     <${Classement} ctx=${ctx} c=${c} equipes=${equipes} rencontres=${rencontres} />
     <${Effectifs} ctx=${ctx} c=${c} equipes=${equipes} peut=${ctx.estCadre} />
-    <div class="actions">
-      ${peutSaisir && html`<button class="btn btn-primaire" type="button" disabled=${equipes.length < 2} onClick=${() => setDialogue(true)}>Nouvelle rencontre</button>`}
-      ${ctx.estCadre && aValider > 0 && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${valider}>Valider les matchs saisis (${aValider})</button>`}
-    </div>
+    ${ctx.estCadre && aValider > 0 && html`<div class="actions"><button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${valider}>Valider les matchs saisis (${aValider})</button></div>`}
     ${equipes.length < 2 && peutSaisir && html`<p class="aide">Il faut au moins deux équipes inscrites.</p>`}
-    ${dialogue && html`<${DialogueRencontre} ctx=${ctx} c=${c} equipes=${equipes} onFermer=${() => setDialogue(false)} />`}
-  </section>`;
+    ${dialogue && html`<${DialogueRencontre} ctx=${ctx} c=${c} equipes=${equipes} tourInitial=${typeof dialogue === 'string' ? dialogue : ''} onFermer=${() => setDialogue(false)} />`}
+  <//>`;
 }

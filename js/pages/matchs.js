@@ -2,7 +2,7 @@
 import { html, useState, useMemo } from '../preact.js';
 import { api } from '../data.js';
 import { norm, nomComplet, fmtPts, msgErreur } from '../lib.js';
-import { Pastille, BadgePts, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
+import { Pliable, Pastille, BadgePts, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
 
 const STATUT = { saisi: 'À valider', valide: 'Validé', rejete: 'À corriger' };
 const GENRE = { saisi: 'alerte', valide: 'actif', rejete: 'archive' };
@@ -178,8 +178,7 @@ export function CarteMatchs({ ctx, c }) {
     } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
   if (!peutSaisir && matchs.length === 0) return null;
-  return html`<section class="carte" aria-label="Matchs">
-    <h2>Matchs et scores</h2>
+  return html`<${Pliable} titre="Matchs et scores" ouvert=${true}>
     ${peutSaisir && html`<p class="aide">Coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}. Les points des simples sont calculés à la validation, ${c.type === 'equipe' ? 'd\'après les points à jour de chaque joueur au moment de la validation' : 'd\'après les points de chaque joueur à la clôture'}.</p>`}
     ${matchs.length === 0 ? html`<p class="aide">Aucun match saisi.</p>` : html`<ul class="matchs">${matchs.map((m) => html`<${LigneMatch} key=${m.id} ctx=${ctx} c=${c} m=${m} peutSaisir=${peutSaisir} onEdit=${(x) => setDialogue({ match: x })} />`)}</ul>`}
     <div class="actions">
@@ -187,7 +186,7 @@ export function CarteMatchs({ ctx, c }) {
       ${ctx.estCadre && aValider > 0 && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${valider}>Valider les matchs saisis (${aValider})</button>`}
     </div>
     ${dialogue && html`<${DialogueMatch} ctx=${ctx} c=${c} match=${dialogue.match} onFermer=${() => setDialogue(null)} />`}
-  </section>`;
+  <//>`;
 }
 
 export function CarteJuges({ ctx, c }) {
@@ -201,15 +200,14 @@ export function CarteJuges({ ctx, c }) {
     setOccupe(true);
     try { await fn(); await ctx.recharger(); toast(message); setAjout(null); } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
-  return html`<section class="carte" aria-label="Juges-arbitres">
-    <h2>Juges-arbitres</h2>
+  return html`<${Pliable} titre="Juges-arbitres" ouvert=${false}>
     ${juges.length === 0 ? html`<p class="aide">Aucun juge-arbitre désigné. Il saisira les scores une fois les inscriptions closes.</p>` : html`<ul class="historique">
       ${juges.map((j) => html`<li key=${j.id}><strong style="flex:1">${nomJ(ctx, j.licencie_id)}</strong>
         <button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => agir(() => api.retirerJuge(j.id), 'Juge retiré.')}>Retirer</button></li>`)}</ul>`}
     <${Champ} id="j-ajout" libelle="Désigner un juge-arbitre" aide="Seules les personnes à qui la fédération a donné le rôle juge-arbitre peuvent être désignées (page Comptes). Il faut toujours au moins un juge.">
       <${ChoixPersonne} id="j-ajout" options=${options} valeur=${ajout} onChange=${setAjout} /><//>
     <div class="actions"><button class="btn btn-primaire" type="button" disabled=${!ajout || occupe} onClick=${() => agir(() => api.ajouterJuge(c.id, ajout), 'Juge désigné.')}>Désigner</button></div>
-  </section>`;
+  <//>`;
 }
 
 export function HistoriqueMatchs({ ctx, l }) {
