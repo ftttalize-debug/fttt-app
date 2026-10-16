@@ -4,6 +4,7 @@ import { api } from '../data.js';
 import { nomComplet, fmtDate, fmtPts, norm, msgErreur, aujourdhuiISO } from '../lib.js';
 import { Pliable, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { DialogueMatch, LigneMatch } from './matchs.js';
+import { FeuilleRencontre, modeleFeuille } from './feuille.js';
 import { raisonRefus } from './inscriptions.js';
 
 const TOURS = ['Journée 1', 'Journée 2', 'Journée 3', 'Journée 4', 'Journée 5', 'Journée 6', 'Demi-finale', 'Finale'];
@@ -109,6 +110,8 @@ function Rencontre({ ctx, c, r, peutSaisir }) {
   const matchs = ctx.matchs.filter((m) => m.rencontre_id === r.id).slice().sort((a, b) => a.created_at.localeCompare(b.created_at));
   const nomsListe = (l) => (l.length ? l.map((id) => { const x = ctx.licencieParId.get(id); return x ? nomComplet(x) : 'Joueur'; }).join(', ') : 'Aucun joueur aligné');
   const pret = listeA.length > 0 && listeB.length > 0;
+  const modele = modeleFeuille(c);
+  const feuille = !!(peutSaisir && pret && modele && listeA.length === modele.lA.length && listeB.length === modele.lB.length);
   async function supprimer() {
     setOccupe(true);
     try { await api.supprimerRencontre(r.id); await ctx.recharger(); toast('Rencontre supprimée.'); } catch (er) { toast(msgErreur(er), 'erreur'); setOccupe(false); }
@@ -129,9 +132,11 @@ function Rencontre({ ctx, c, r, peutSaisir }) {
         <button class="btn btn-secondaire" type="button" onClick=${() => setDialogue({ comp: ea })}>Feuille ${nomEquipe(ctx, ea)}</button>
         <button class="btn btn-secondaire" type="button" onClick=${() => setDialogue({ comp: eb })}>Feuille ${nomEquipe(ctx, eb)}</button>
       </div>`}
-      ${matchs.length > 0 && html`<ul class="matchs">${matchs.map((m) => html`<${LigneMatch} key=${m.id} ctx=${ctx} c=${c} m=${m} peutSaisir=${peutSaisir} onEdit=${(x) => setDialogue({ match: x })} />`)}</ul>`}
+      ${feuille ? html`<${FeuilleRencontre} ctx=${ctx} c=${c} r=${r} modele=${modele} listeA=${listeA} listeB=${listeB} matchs=${matchs}
+          nomA=${nomEquipe(ctx, ea)} nomB=${nomEquipe(ctx, eb)} onEdit=${(x) => setDialogue({ match: x })} />`
+        : matchs.length > 0 && html`<ul class="matchs">${matchs.map((m) => html`<${LigneMatch} key=${m.id} ctx=${ctx} c=${c} m=${m} peutSaisir=${peutSaisir} onEdit=${(x) => setDialogue({ match: x })} />`)}</ul>`}
       <div class="actions">
-        ${peutSaisir && html`<button class="btn btn-primaire" type="button" disabled=${!pret} onClick=${() => setDialogue({ saisie: true })}>Saisir un match</button>`}
+        ${peutSaisir && html`<button class=${feuille ? 'btn btn-lien' : 'btn btn-primaire'} type="button" disabled=${!pret} onClick=${() => setDialogue({ saisie: true })}>${feuille ? 'Ajouter un match hors feuille' : 'Saisir un match'}</button>`}
         ${peutSaisir && matchs.length === 0 && html`<button class="btn btn-lien" type="button" disabled=${occupe} onClick=${supprimer}>Supprimer la rencontre</button>`}
       </div>
       ${peutSaisir && !pret && html`<p class="aide">Aligne d'abord les joueurs des deux équipes (feuille de rencontre).</p>`}

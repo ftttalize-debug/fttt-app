@@ -402,3 +402,23 @@ a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(-
 .pliable-petit > .pliable-corps { padding: 4px 0 12px; }
 .rencontre-tete { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 4px 0; font: inherit; color: inherit; cursor: pointer; }
 .rencontre-tete .match-score { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* ---- Feuille de rencontre ---- */
+.feuille { margin-top: 8px; }
+.lf-entete { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.lf-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lf { background: var(--blanc); border: 1px solid var(--trait); border-radius: 12px; padding: 10px 12px; }
+.lf-fait { border-color: #8CCBA3; background: #F3FAF5; }
+.lf-noms { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; line-height: 1.3; }
+.lf-num { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 50%; background: var(--indigo); color: #fff; font-weight: 700; font-size: 13px; flex: none; }
+.lf-double { font-size: 12px; font-weight: 700; color: var(--brique-texte); text-transform: uppercase; letter-spacing: .04em; }
+.lf-contre { color: var(--brun-doux); }
+.lf-paire { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.lf-paire select { max-width: 150px; }
+.lf-input { width: 100%; margin-top: 8px; font-size: 18px; letter-spacing: .04em; }
+.lf-etat { margin-top: 4px; font-size: 14px; min-height: 18px; }
+.lf-ok { color: #14572F; font-weight: 600; }
+.lf-err { color: #B02A2A; font-weight: 600; }
+.lf-pts { margin-left: 8px; }
+.lf-actions { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+.lf-forfait { font-size: 14px; max-width: 220px; }
