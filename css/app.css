@@ -425,3 +425,20 @@ a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(-
 
 .pliable-titre { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pliable-sous { color: var(--brun-doux); font-size: 14px; line-height: 1.3; font-weight: 400; }
+
+/* ---- Résultats par compétition et cartes d'inscription : plus aérés, textes adoucis ---- */
+.resultats-comp { display: grid; gap: 14px; margin-top: 12px; }
+.resultats-comp .pliable-petit { margin: 0; padding: 8px 16px; background: var(--blanc); box-shadow: 0 1px 2px rgba(75, 42, 31, .05); }
+.resultats-comp .pliable-petit > summary { min-height: 64px; gap: 12px; padding: 4px 0; }
+.resultats-comp .pliable-titre { gap: 6px; }
+.resultats-comp .pliable-titre h3 { font-size: 18px; font-weight: 600; line-height: 1.25; }
+.resultats-comp .pliable-sous { font-size: 14px; line-height: 1.4; color: var(--brun-doux); opacity: .9; }
+.resultats-comp .pliable-resume { margin-left: auto; }
+.resultats-comp .pliable-petit > .pliable-corps { padding: 6px 0 14px; border-top: 1px solid var(--trait); margin-top: 6px; }
+.resultats-comp .matchs { display: grid; gap: 12px; }
+.liste-comp { display: grid; gap: 14px; }
+.carte-comp { padding: 16px 18px; }
+.carte-comp > .match-tete strong { font-size: 18px; font-weight: 600; }
+.carte-comp p { margin: 8px 0 0; }
+.carte-comp .comp-date { font-weight: 400; color: var(--brun); }
+.carte-comp .comp-infos { margin: 6px 0 0; }

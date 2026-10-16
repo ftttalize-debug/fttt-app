@@ -50,7 +50,7 @@ export function ResultatsParCompetition({ histo }) {
   const groupes = useMemo(() => groupesParCompetition(histo), [histo]);
   if (histo === null) return html`<${Chargement} />`;
   if (!groupes.length) return html`<p class="vide">Aucun match validé pour le moment.</p>`;
-  return html`<div>${groupes.map((g) => {
+  return html`<div class="resultats-comp">${groupes.map((g) => {
     const b = bilanHisto(g.matchs);
     const tours = resumeTours(g.matchs);
     return html`<${Pliable} key=${g.id} petit=${true} titre=${g.nom}

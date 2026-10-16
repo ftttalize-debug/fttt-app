@@ -44,7 +44,7 @@ function Inscriptions({ liste, resultats }) {
     <h3>À venir</h3>
     <${Pagine} items=${avenir} vide="Aucune inscription à venir." rendu=${(l) => html`<ul class="liste-comp">${l.map((c) => html`<${LigneInscription} key=${c.id} c=${c} resultats=${resultats} ouvrable=${false} />`)}</ul>`} />
     <h3>Passées</h3>
-    <${Pagine} items=${passees} vide="Aucune compétition passée." rendu=${(l) => html`<ul class="liste-comp">${l.map((c) => html`<${LigneInscription} key=${c.id} c=${c} resultats=${resultats} ouvrable=${true} />`)}</ul>`} />
+    <${Pagine} items=${passees} vide="Aucune compétition passée." rendu=${(l) => html`<ul class="liste-comp">${l.map((c) => html`<${LigneInscription} key=${c.id} c=${c} resultats=${resultats} ouvrable=${false} />`)}</ul>`} />
   </div>`;
 }
 
