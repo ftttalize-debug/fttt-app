@@ -5,6 +5,7 @@ import { api } from '../data.js';
 import { fmtDate, msgErreur, estMineur, emailValide, aujourdhuiISO, lireRoute } from '../lib.js';
 import { Champ, Pastille, Chargement, toast } from '../ui.js';
 import { OngletsPublics } from './public.js';
+import { COORDONNEES_BANCAIRES as RIB } from '../config.js';
 import { telechargerFiche, telechargerFiches, EMAIL_SECRETARIAT } from '../fiche-stage-pdf.js';
 
 const xpf = (n) => `${Number(n || 0).toLocaleString('fr-FR')} XPF`;
@@ -12,6 +13,26 @@ const quand = (s) => (s.date_fin && s.date_fin !== s.date_debut ? `Du ${fmtDate(
 let compteur = 0;
 const participantVide = () => ({ cle: ++compteur, prenom: '', nom: '', naissance: '', sexe: '' });
 const estMineurValide = (n) => !!n && n <= aujourdhuiISO() && estMineur(n);
+
+/** Coordonnées bancaires pour un règlement par virement, avec copie de l'IBAN en un geste. */
+function CoordonneesVirement({ reference }) {
+  const [copie, setCopie] = useState(false);
+  async function copier() {
+    try { await navigator.clipboard.writeText(RIB.iban.replace(/\s/g, '')); setCopie(true); setTimeout(() => setCopie(false), 2500); }
+    catch (e) { toast('Copie impossible : sélectionne l\'IBAN et copie-le à la main.', 'erreur'); }
+  }
+  return html`<div class="avis coordonnees-bancaires">
+    <p><strong>Coordonnées pour le virement</strong></p>
+    <dl class="fiche-liste">
+      <div><dt>Bénéficiaire</dt><dd>${RIB.titulaire}</dd></div>
+      <div><dt>Banque</dt><dd>${RIB.banque}</dd></div>
+      <div><dt>IBAN</dt><dd><span class="iban">${RIB.iban}</span></dd></div>
+      <div><dt>BIC / SWIFT</dt><dd>${RIB.bic}</dd></div>
+    </dl>
+    <p><button class="btn btn-secondaire" type="button" onClick=${copier}>${copie ? 'IBAN copié ✓' : 'Copier l\'IBAN'}</button></p>
+    <p class="aide">${reference ? 'Indique le nom du participant en référence du virement.' : 'Indique le nom du participant et le stage en référence du virement.'} Une facture acquittée sera remise après réception.</p>
+  </div>`;
+}
 
 function Confirmation({ stages, r, f, onRetour }) {
   const [occupe, setOccupe] = useState(false);
@@ -56,9 +77,9 @@ function Confirmation({ stages, r, f, onRetour }) {
     ${confirmees.length > 0 && html`<p class="avis">Total à régler : <strong>${xpf(r.total_xpf)}</strong>, licence événementielle incluse.</p>`}
     ${confirmees.length > 0 && r.mode_paiement === 'sur_place' && html`<p>Règlement <strong>sur place</strong> le premier jour. Une facture acquittée sera remise une fois le paiement effectué.</p>`}
     ${confirmees.length > 0 && r.mode_paiement === 'virement' && html`<div>
-      <p>Règlement <strong>par virement</strong>${paiement.length ? ' :' : '. La fédération te communiquera ses coordonnées bancaires.'}</p>
+      <p>Règlement <strong>par virement</strong> de ${xpf(r.total_xpf)}.</p>
       ${paiement.length > 0 && html`<ul class="liste-simple">${paiement.map((l, k) => html`<li key=${k}>${l}</li>`)}</ul>`}
-      <p class="aide">Indique le nom du participant en référence du virement. Une facture acquittée sera remise après réception.</p>
+      <${CoordonneesVirement} reference=${true} />
     </div>`}
     ${fiches.length > 0 && html`<div class="avis">
       <p><strong>À apporter le premier jour :</strong></p>
@@ -219,6 +240,7 @@ function Formulaire({ stages, preselection, onFait }) {
           <option value="virement">Par virement</option>
         </select>
       <//>
+      ${mode === 'virement' && html`<${CoordonneesVirement} />`}
       <div style="position:absolute;left:-9999px" aria-hidden="true">
         <label for="a-site">Ne pas remplir</label>
         <input id="a-site" type="text" tabindex="-1" autocomplete="off" value=${site} onInput=${(e) => setSite(e.target.value)} />
