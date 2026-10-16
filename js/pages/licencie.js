@@ -6,24 +6,13 @@ import {
   lien, naviguer, norm, fmtPts, fmtDate, nomComplet, estMineur, emailValide, aujourdhuiISO, msgErreur,
   parseDate, TYPES_LICENCE, TYPES_CERTIFICAT
 } from '../lib.js';
-import { Icone, Pastille, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
+import { Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { HistoriqueMatchs } from './matchs.js';
 import { telechargerAttestation } from '../attestation-pdf.js';
 import { etatCompte } from './comptes.js';
 
 const CERT_PAR_DEFAUT = { competition: 'competition', loisir: 'loisir', evenementielle: 'evenementiel', dirigeant: '' };
 const STATUT_LICENCE = { active: 'Active', expiree: 'Expirée', annulee: 'Annulée' };
-
-function optionsRepresentants(ctx, exclureId) {
-  return ctx.licencies
-    .filter((x) => x.id !== exclureId && !estMineur(x.date_naissance))
-    .map((x) => ({
-      id: x.id,
-      libelle: nomComplet(x),
-      detail: `${x.clubNom} · né(e) le ${fmtDate(x.date_naissance)}`,
-      cle: norm(`${x.prenom} ${x.nom}`)
-    }));
-}
 
 const normaliser = (f) => ({
   nom: f.nom.trim().toUpperCase(),
@@ -34,13 +23,13 @@ const normaliser = (f) => ({
   email: f.email.trim().toLowerCase() || null,
   telephone: f.telephone.trim() || null,
   handicap: !!f.handicap,
-  representant_legal_id: f.representant_legal_id || null
+  representant_nom: (f.representant_nom || '').trim() || null
 });
 
 const formDepuis = (l) => ({
   nom: l.nom, prenom: l.prenom, date_naissance: l.date_naissance, sexe: l.sexe, club_id: l.club_id || '',
   email: l.email || '', telephone: l.telephone || '', handicap: !!l.handicap,
-  representant_legal_id: l.representant_legal_id || null
+  representant_nom: l.representant_nom || ''
 });
 
 function validerIdentite(f, { exigerRepresentant }) {
@@ -52,15 +41,14 @@ function validerIdentite(f, { exigerRepresentant }) {
   if (!f.sexe) e.sexe = 'Obligatoire.';
   if (!f.club_id) e.club_id = 'Choisis un club.';
   if (!emailValide(f.email)) e.email = 'Adresse e-mail invalide.';
-  if (exigerRepresentant && f.date_naissance && estMineur(f.date_naissance) && !f.representant_legal_id) {
-    e.representant = 'Un représentant légal est obligatoire pour un mineur.';
+  if (exigerRepresentant && f.date_naissance && estMineur(f.date_naissance) && !(f.representant_nom || '').trim()) {
+    e.representant = 'Le nom du représentant légal est obligatoire pour un mineur.';
   }
   return e;
 }
 
 // ---------- Champs partagés ----------
 function ChampsIdentite({ f, maj, erreurs, ctx, idExclu }) {
-  const representants = useMemo(() => optionsRepresentants(ctx, idExclu), [ctx.licencies, idExclu]);
   const mineur = f.date_naissance && estMineur(f.date_naissance);
   return html`<div class="grille grille-2">
     <${Champ} id="f-nom" libelle="Nom" erreur=${erreurs.nom}>
@@ -99,11 +87,10 @@ function ChampsIdentite({ f, maj, erreurs, ctx, idExclu }) {
       <input id="f-tel" type="tel" autocomplete="off" value=${f.telephone} onInput=${(e) => maj({ telephone: e.target.value })} />
     <//>
     <div class="plein">
-      <${Champ} id="f-rep" libelle=${'Représentant légal' + (mineur ? ' (obligatoire)' : '')}
-          aide=${mineur ? 'Ce licencié est mineur : choisis un parent ou tuteur déjà licencié.' : 'Utile seulement pour un mineur.'}
+      <${Champ} id="f-rep" libelle=${'Représentant légal (nom du parent ou tuteur)' + (mineur ? ' – obligatoire' : '')}
+          aide=${mineur ? "Ce licencié est mineur : indique le nom et prénom de son parent ou tuteur. Il n'a pas besoin d'être licencié." : 'Utile seulement pour un mineur.'}
           erreur=${erreurs.representant}>
-        <${ChoixPersonne} id="f-rep" options=${representants} valeur=${f.representant_legal_id}
-          onChange=${(v) => maj({ representant_legal_id: v })} />
+        <input id="f-rep" type="text" autocomplete="off" value=${f.representant_nom || ''} onInput=${(e) => maj({ representant_nom: e.target.value })} />
       <//>
     </div>
   </div>`;
@@ -147,7 +134,7 @@ function DialogueLicence({ ctx, l, onFermer }) {
   const [club, setClub] = useState(l.club_id || '');
   const [occupe, setOccupe] = useState(false);
   const majG = (p) => setG((x) => ({ ...x, ...p }));
-  const mineurSansRep = estMineur(l.date_naissance) && !l.representant_legal_id;
+  const mineurSansRep = estMineur(l.date_naissance) && !l.representant_legal_id && !l.representant_nom;
   const remonte = l.statut === 'archive' && Number(l.points) < 500;
 
   async function valider(e) {
@@ -267,11 +254,12 @@ function FormulaireFiche({ ctx, l }) {
 
   async function enregistrer(e) {
     e.preventDefault();
-    const err = validerIdentite(f, { exigerRepresentant: l.statut === 'actif' && !!l.representant_legal_id });
+    const err = validerIdentite(f, { exigerRepresentant: l.statut === 'actif' && !!(l.representant_legal_id || l.representant_nom) });
     setErreurs(err);
     if (Object.keys(err).length) return toast('Corrige les champs signalés.', 'erreur');
     const patch = {};
     for (const k of Object.keys(actuel)) if (actuel[k] !== initial[k]) patch[k] = actuel[k];
+    if ('representant_nom' in patch) patch.representant_legal_id = null; // le nom saisi remplace l'ancien lien
     setOccupe(true);
     try {
       await api.majLicencie(l.id, patch);
@@ -298,7 +286,8 @@ function FormulaireFiche({ ctx, l }) {
 
 // ---------- Lecture seule (responsable de club, licencié) ----------
 function LectureFiche({ ctx, l, estSoi }) {
-  const rep = l.representant_legal_id ? ctx.licencieParId.get(l.representant_legal_id) : null;
+  const lie = l.representant_legal_id ? ctx.licencieParId.get(l.representant_legal_id) : null;
+  const rep = l.representant_nom || (lie ? nomComplet(lie) : '');
   return html`<section class="carte" aria-label="Informations">
     <h2>Informations</h2>
     <dl class="def">
@@ -310,7 +299,7 @@ function LectureFiche({ ctx, l, estSoi }) {
       <div><dt>E-mail</dt><dd>${l.email || '—'}</dd></div>
       <div><dt>Téléphone</dt><dd>${l.telephone || '—'}</dd></div>
       ${(estSoi || ctx.estCadre) && html`<div><dt>Para-tennis de table</dt><dd>${l.handicap ? 'Oui' : 'Non'}</dd></div>`}
-      ${rep && html`<div><dt>Représentant légal</dt><dd>${nomComplet(rep)}</dd></div>`}
+      ${rep && html`<div><dt>Représentant légal</dt><dd>${rep}</dd></div>`}
     </dl>
   </section>`;
 }
@@ -426,7 +415,7 @@ export function PageLicencie({ ctx, id }) {
 
 // ---------- Création d'un licencié ----------
 export function PageNouveauLicencie({ ctx }) {
-  const [f, setF] = useState({ nom: '', prenom: '', date_naissance: '', sexe: '', club_id: '', email: '', telephone: '', handicap: false, representant_legal_id: null });
+  const [f, setF] = useState({ nom: '', prenom: '', date_naissance: '', sexe: '', club_id: '', email: '', telephone: '', handicap: false, representant_nom: '' });
   const [g, setG] = useState(licenceVide());
   const [erreurs, setErreurs] = useState({});
   const [occupe, setOccupe] = useState(false);
@@ -449,7 +438,7 @@ export function PageNouveauLicencie({ ctx }) {
     try {
       const nouvelId = await api.creerLicencie({
         nom: n.nom, prenom: n.prenom, naissance: n.date_naissance, sexe: n.sexe, club: n.club_id,
-        email: n.email, telephone: n.telephone, handicap: n.handicap, representant: n.representant_legal_id,
+        email: n.email, telephone: n.telephone, handicap: n.handicap, representantNom: n.representant_nom,
         saison: ctx.saison.id, type: g.type, certType: g.certType, certDate: g.certDate,
         certFourni: g.certFourni, questionnaire: g.questionnaire, photo: g.photo
       });

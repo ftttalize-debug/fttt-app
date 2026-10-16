@@ -21,7 +21,7 @@ export function PageAccueil({ ctx }) {
   const archives = licencies.filter((l) => l.statut === 'archive');
   const auj = aujourdhuiISO();
   const nbCompetitions = (ctx.competitions || []).filter((c) => c.statut !== 'brouillon' && c.saison_id === saison?.id && c.date_fin >= auj).length;
-  const nbRep = licencies.filter((l) => l.statut === 'actif' && l.age !== null && l.age < 18 && !l.representant_legal_id).length;
+  const nbRep = licencies.filter((l) => l.statut === 'actif' && l.age !== null && l.age < 18 && !l.representant_legal_id && !l.representant_nom).length;
   const nbAlertes = licencies.filter((l) => etatCertificat(l)).length;
   const parType = {};
   for (const l of actifs) {

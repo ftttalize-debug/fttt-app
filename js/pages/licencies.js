@@ -4,7 +4,7 @@ import { lien, naviguer, estMineur, norm, fmtPts, fmtDate, aujourdhuiISO, telech
 import { Icone, Pastille } from '../ui.js';
 
 const PAGE = 40;
-const repManquant = (l) => l.statut === 'actif' && estMineur(l.date_naissance) && !l.representant_legal_id;
+const repManquant = (l) => l.statut === 'actif' && estMineur(l.date_naissance) && !l.representant_legal_id && !l.representant_nom;
 
 export function PageLicencies({ ctx, route }) {
   const { licencies, clubs, saison, estCadre } = ctx;
