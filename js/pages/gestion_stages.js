@@ -65,7 +65,15 @@ function FormStage({ stage, onFait, onAnnuler }) {
   </form>`;
 }
 
-function LigneInscrit({ i, stage, ctx, agir }) {
+// Fiche d'une personne : tous ses stages confirmés, regroupés par clé (prénom+nom+naissance)
+function fichePour(i, data) {
+  const siens = data.inscriptions.filter((x) => x.cle === i.cle && x.statut === 'inscrit');
+  const lignes = siens.length ? siens : [i];
+  const stages = lignes.map((x) => data.stages.find((s) => s.id === x.stage_id)).filter(Boolean).sort((a, b) => (a.date_debut < b.date_debut ? -1 : 1));
+  return { stages, certificat: lignes.some((x) => x.tarif === 'non_licencie'), inscription: i };
+}
+
+function LigneInscrit({ i, stage, ctx, data, agir }) {
   const [occupe, setOccupe] = useState(false);
   async function lancer(fn, message) {
     setOccupe(true);
@@ -78,9 +86,11 @@ function LigneInscrit({ i, stage, ctx, agir }) {
   }
   async function fiche() {
     setOccupe(true);
-    try { await telechargerFiche(stage, i); } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
+    try { await telechargerFiche(fichePour(i, data)); } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
   const age = ageExact(i.date_naissance);
+  // La fiche et le certificat concernent la personne : on les met à jour pour tous ses stages d'un coup
+  const groupe = data.inscriptions.filter((x) => x.cle === i.cle && x.statut === 'inscrit').map((x) => x.id);
   return html`<li class=${'stage-ligne' + (i.statut === 'attente' ? ' attente' : '') + (i.statut === 'annule' ? ' annule' : '')}>
     <div class="match-tete"><strong>${i.prenom} ${i.nom}</strong>
       <span class="etiquettes">
@@ -88,6 +98,7 @@ function LigneInscrit({ i, stage, ctx, agir }) {
         ${i.statut === 'inscrit' && (i.paye ? html`<${Pastille} genre="actif">Payé · ${MODES[i.mode_paiement] || ''}<//>` : html`<${Pastille} genre="alerte">À payer<//>`)}
         ${i.statut === 'attente' && html`<${Pastille} genre="alerte">Liste d'attente<//>`}
         ${i.statut === 'inscrit' && (i.fiche_recue ? html`<${Pastille} genre="actif">Fiche signée reçue<//>` : html`<${Pastille} genre="alerte">Fiche à recevoir<//>`)}
+        ${i.statut === 'inscrit' && i.tarif === 'non_licencie' && (i.certificat_recu ? html`<${Pastille} genre="actif">Certificat reçu<//>` : html`<${Pastille} genre="alerte">Certificat à recevoir<//>`)}
       </span>
     </div>
     <p class="comp-infos">${xpf(i.montant_xpf)} (${i.tarif === 'licencie' ? 'licencié' : 'non licencié'}) · règlement prévu ${MODES[i.mode_paiement] || '—'}${i.numero_facture ? ' · ' + i.numero_facture : ''}</p>
@@ -97,7 +108,8 @@ function LigneInscrit({ i, stage, ctx, agir }) {
     <div class="etiquettes">
       ${i.statut === 'attente' && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.stageChangerStatut(i.id, 'inscrit'), 'Inscription confirmée.')}>Valider l'inscription</button>`}
       ${i.statut !== 'annule' && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${fiche}>Fiche d'inscription (PDF)</button>`}
-      ${i.statut === 'inscrit' && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.majInscriptionStage(i.id, { fiche_recue: !i.fiche_recue }), i.fiche_recue ? 'Fiche marquée non reçue.' : 'Fiche signée reçue.')}>${i.fiche_recue ? 'Fiche non reçue' : 'Fiche signée reçue'}</button>`}
+      ${i.statut === 'inscrit' && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.majInscriptionsStage(groupe, { fiche_recue: !i.fiche_recue }), i.fiche_recue ? 'Fiche marquée non reçue.' : 'Fiche signée reçue.')}>${i.fiche_recue ? 'Fiche non reçue' : 'Fiche signée reçue'}</button>`}
+      ${i.statut === 'inscrit' && i.tarif === 'non_licencie' && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.majInscriptionsStage(groupe, { certificat_recu: !i.certificat_recu }), i.certificat_recu ? 'Certificat marqué non reçu.' : 'Certificat médical reçu.')}>${i.certificat_recu ? 'Certificat non reçu' : 'Certificat reçu'}</button>`}
       ${i.statut === 'inscrit' && !i.paye && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.stageMarquerPaye(i.id, true, 'sur_place'), 'Paiement enregistré.')}>Payé sur place</button>`}
       ${i.statut === 'inscrit' && !i.paye && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.stageMarquerPaye(i.id, true, 'virement'), 'Paiement enregistré.')}>Payé par virement</button>`}
       ${i.statut === 'inscrit' && i.paye && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${pdf}>Facture acquittée (PDF)</button>`}
@@ -108,7 +120,7 @@ function LigneInscrit({ i, stage, ctx, agir }) {
   </li>`;
 }
 
-function Detail({ stage, inscriptions, ctx, recharger, onRetour, onModifier }) {
+function Detail({ stage, inscriptions, ctx, data, recharger, onRetour, onModifier }) {
   const inscrits = inscriptions.filter((i) => i.statut === 'inscrit');
   const attente = inscriptions.filter((i) => i.statut === 'attente');
   const annules = inscriptions.filter((i) => i.statut === 'annule');
@@ -116,7 +128,12 @@ function Detail({ stage, inscriptions, ctx, recharger, onRetour, onModifier }) {
   const encaisse = payes.reduce((n, i) => n + i.montant_xpf, 0);
 
   async function toutesLesFiches() {
-    try { await telechargerFiches(stage, inscrits); } catch (e) { toast(msgErreur(e), 'erreur'); }
+    try {
+      const vus = new Set();
+      const fiches = [];
+      for (const i of inscrits) { if (vus.has(i.cle)) continue; vus.add(i.cle); fiches.push(fichePour(i, data)); }
+      await telechargerFiches(fiches, stage.nom);
+    } catch (e) { toast(msgErreur(e), 'erreur'); }
   }
   const lienStage = `${location.origin}${location.pathname}#/stages?stage=${stage.id}`;
   async function copierLien() {
@@ -125,11 +142,11 @@ function Detail({ stage, inscriptions, ctx, recharger, onRetour, onModifier }) {
   }
   function exporter() {
     telechargerCsv(`stage-${stage.nom.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`,
-      ['Statut', 'Nom', 'Prénom', 'Date de naissance', 'Sexe', 'Téléphone', 'E-mail', 'Parent / tuteur', 'Tél. parent', 'E-mail parent', 'Autorisation parentale', 'Photos', 'Fiche signée reçue', 'Tarif', 'Montant XPF', 'Règlement prévu', 'Payé', 'Date paiement', 'N° facture'],
+      ['Statut', 'Nom', 'Prénom', 'Date de naissance', 'Sexe', 'Téléphone', 'E-mail', 'Parent / tuteur', 'Tél. parent', 'E-mail parent', 'Autorisation parentale', 'Photos', 'Fiche signée reçue', 'Certificat reçu', 'Tarif', 'Montant XPF', 'Règlement prévu', 'Payé', 'Date paiement', 'N° facture'],
       inscriptions.map((i) => [i.statut, i.nom, i.prenom, i.date_naissance, i.sexe, i.telephone, i.email, i.representant_nom, i.representant_telephone, i.representant_email,
-        i.autorisation_parentale ? 'oui' : 'non', i.autorisation_photo ? 'oui' : 'non', i.fiche_recue ? 'oui' : 'non', i.tarif, i.montant_xpf, i.mode_paiement, i.paye ? 'oui' : 'non', i.date_paiement, i.numero_facture]));
+        i.autorisation_parentale ? 'oui' : 'non', i.autorisation_photo ? 'oui' : 'non', i.fiche_recue ? 'oui' : 'non', i.tarif === 'non_licencie' ? (i.certificat_recu ? 'oui' : 'non') : 'licencié', i.tarif, i.montant_xpf, i.mode_paiement, i.paye ? 'oui' : 'non', i.date_paiement, i.numero_facture]));
   }
-  const liste = (titre, l) => l.length > 0 && html`<h2>${titre} (${l.length})</h2><ul class="liste-comp">${l.map((i) => html`<${LigneInscrit} key=${i.id} i=${i} stage=${stage} ctx=${ctx} agir=${recharger} />`)}</ul>`;
+  const liste = (titre, l) => l.length > 0 && html`<h2>${titre} (${l.length})</h2><ul class="liste-comp">${l.map((i) => html`<${LigneInscrit} key=${i.id} i=${i} stage=${stage} ctx=${ctx} data=${data} agir=${recharger} />`)}</ul>`;
 
   return html`<div>
     <button class="btn btn-secondaire" type="button" onClick=${onRetour}>← Tous les stages</button>
@@ -175,7 +192,7 @@ export function PageGestionStages({ ctx }) {
     contenu = html`<${FormStage} stage=${form === 'modifier' ? stage : null} onAnnuler=${() => setForm(null)}
       onFait=${async (r) => { await recharger(); setSel(r.id); setForm(null); }} />`;
   } else if (stage) {
-    contenu = html`<${Detail} stage=${stage} inscriptions=${parStage.get(stage.id) || []} ctx=${ctx} recharger=${recharger}
+    contenu = html`<${Detail} stage=${stage} inscriptions=${parStage.get(stage.id) || []} ctx=${ctx} data=${data} recharger=${recharger}
       onRetour=${() => setSel(null)} onModifier=${() => setForm('modifier')} />`;
   } else {
     contenu = html`<div>
