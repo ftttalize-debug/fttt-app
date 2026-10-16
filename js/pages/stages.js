@@ -1,9 +1,10 @@
 // Page publique « Stages » : liste des stages ouverts et inscription sans compte (licence événementielle).
 import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
-import { fmtDate, msgErreur, estMineur, emailValide, aujourdhuiISO } from '../lib.js';
-import { Champ, Pastille, Chargement } from '../ui.js';
+import { fmtDate, msgErreur, estMineur, emailValide, aujourdhuiISO, lireRoute } from '../lib.js';
+import { Champ, Pastille, Chargement, toast } from '../ui.js';
 import { OngletsPublics } from './public.js';
+import { telechargerFiche, EMAIL_SECRETARIAT } from '../fiche-stage-pdf.js';
 
 const xpf = (n) => `${Number(n || 0).toLocaleString('fr-FR')} XPF`;
 const quand = (s) => (s.date_fin && s.date_fin !== s.date_debut ? `Du ${fmtDate(s.date_debut)} au ${fmtDate(s.date_fin)}` : fmtDate(s.date_debut));
@@ -27,8 +28,19 @@ function CarteStage({ s, onChoisir }) {
   </li>`;
 }
 
-function Confirmation({ stage, r, onRetour }) {
+function Confirmation({ stage, r, f, onRetour }) {
   const attente = r.statut === 'attente';
+  const [occupe, setOccupe] = useState(false);
+  const inscription = {
+    prenom: f.prenom.trim(), nom: f.nom.trim().toUpperCase(), date_naissance: f.naissance, mineur: estMineur(f.naissance),
+    telephone: f.telephone.trim(), email: f.email.trim(), representant_nom: f.representantNom.trim(),
+    representant_telephone: f.representantTelephone.trim(), representant_email: f.representantEmail.trim(), autorisation_photo: f.autorisationPhoto
+  };
+  async function fiche() {
+    setOccupe(true);
+    try { await telechargerFiche(stage, inscription); } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
+  }
+  const mailto = `mailto:${EMAIL_SECRETARIAT}?subject=${encodeURIComponent(`Fiche d'inscription signée - ${stage.nom} - ${inscription.prenom} ${inscription.nom}`)}&body=${encodeURIComponent('Bonjour,\n\nVeuillez trouver ci-joint la fiche d\'inscription signée (photo ou scan à joindre à ce message).\n\nCordialement')}`;
   const lignes = Array.isArray(r.paiement) ? r.paiement : [];
   return html`<section class="carte" aria-live="polite">
     <h2>${attente ? 'Tu es sur la liste d\'attente' : 'Inscription enregistrée'}</h2>
@@ -42,6 +54,13 @@ function Confirmation({ stage, r, onRetour }) {
       ${lignes.length > 0 && html`<ul class="liste-simple">${lignes.map((l, i) => html`<li key=${i}>${l}</li>`)}</ul>`}
       <p class="aide">Indique le nom du participant en référence du virement. Une facture acquittée te sera remise après réception.</p>
     </div>`}
+    ${!attente && html`<div class="avis">
+      <p><strong>Dernière étape : la fiche d'inscription signée.</strong> Télécharge la fiche déjà remplie, imprime-la, complète à la main les informations de santé et d'urgence, et signe-la${inscription.mineur ? ' (parent ou tuteur)' : ''}.
+      Remets-la le premier jour du stage, ou envoie-en une photo ou un scan à <strong>${EMAIL_SECRETARIAT}</strong>.</p>
+      <div class="etiquettes">
+        <button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${fiche}>Télécharger la fiche (PDF)</button>
+        <a class="btn btn-secondaire" href=${mailto}>Envoyer la fiche signée par e-mail</a>
+      </div></div>`}
     <button class="btn btn-secondaire" type="button" onClick=${onRetour}>Retour aux stages</button>
   </section>`;
 }
@@ -82,7 +101,7 @@ function Formulaire({ stage, onAnnuler, onFait }) {
     setOccupe(true);
     try {
       const r = await api.sinscrireStage({ stage: stage.id, ...f, prenom: f.prenom.trim(), nom: f.nom.trim() });
-      onFait(r);
+      onFait({ r, f });
     } catch (er) {
       setErreurGlobale(msgErreur(er));
     } finally {
@@ -177,16 +196,25 @@ export function PageStages() {
   const [erreur, setErreur] = useState('');
   const [choix, setChoix] = useState(null);
   const [resultat, setResultat] = useState(null);
+  const idDirect = useMemo(() => lireRoute().query.stage || '', []);
+  const [introuvable, setIntrouvable] = useState(false);
 
   const charger = () => api.stagesPublics().then(setStages).catch((e) => setErreur(msgErreur(e)));
   useEffect(() => { charger(); }, []);
+  // Lien direct (#/stages?stage=…) : ouvre le formulaire du stage
+  useEffect(() => {
+    if (!stages || !idDirect) return;
+    const s = stages.find((x) => x.id === idDirect);
+    if (s) setChoix(s); else setIntrouvable(true);
+  }, [stages]);
   useEffect(() => { window.scrollTo(0, 0); }, [choix, resultat]);
 
   return html`<div class="page">
     <div class="page-tete"><div><h1>Stages</h1><p>Inscris-toi à un stage de la fédération, sans compte.</p></div></div>
     <${OngletsPublics} actif="stages" />
+    ${introuvable && !choix && html`<p class="avis">Ce stage n'est plus ouvert aux inscriptions. Voici les stages disponibles.</p>`}
     ${resultat
-      ? html`<${Confirmation} stage=${choix} r=${resultat} onRetour=${() => { setResultat(null); setChoix(null); charger(); }} />`
+      ? html`<${Confirmation} stage=${choix} r=${resultat.r} f=${resultat.f} onRetour=${() => { setResultat(null); setChoix(null); charger(); }} />`
       : choix
         ? html`<${Formulaire} stage=${choix} onAnnuler=${() => setChoix(null)} onFait=${setResultat} />`
         : erreur ? html`<p class="erreur" role="alert">${erreur}</p>`

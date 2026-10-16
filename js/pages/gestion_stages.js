@@ -4,6 +4,7 @@ import { api } from '../data.js';
 import { fmtDate, msgErreur, telechargerCsv, ageExact } from '../lib.js';
 import { Pastille, Champ, Chargement, toast } from '../ui.js';
 import { telechargerFactureStage } from '../facture-stage-pdf.js';
+import { telechargerFiche, telechargerFiches } from '../fiche-stage-pdf.js';
 
 const xpf = (n) => `${Number(n || 0).toLocaleString('fr-FR')} XPF`;
 const quand = (s) => (s.date_fin && s.date_fin !== s.date_debut ? `Du ${fmtDate(s.date_debut)} au ${fmtDate(s.date_fin)}` : fmtDate(s.date_debut));
@@ -75,6 +76,10 @@ function LigneInscrit({ i, stage, ctx, agir }) {
     try { await telechargerFactureStage({ stage, inscription: i, federation: ctx.federation }); }
     catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
   }
+  async function fiche() {
+    setOccupe(true);
+    try { await telechargerFiche(stage, i); } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
+  }
   const age = ageExact(i.date_naissance);
   return html`<li class=${'stage-ligne' + (i.statut === 'attente' ? ' attente' : '') + (i.statut === 'annule' ? ' annule' : '')}>
     <div class="match-tete"><strong>${i.prenom} ${i.nom}</strong>
@@ -82,6 +87,7 @@ function LigneInscrit({ i, stage, ctx, agir }) {
         <${Pastille} genre="neutre">${age} ans<//>
         ${i.statut === 'inscrit' && (i.paye ? html`<${Pastille} genre="actif">Payé · ${MODES[i.mode_paiement] || ''}<//>` : html`<${Pastille} genre="alerte">À payer<//>`)}
         ${i.statut === 'attente' && html`<${Pastille} genre="alerte">Liste d'attente<//>`}
+        ${i.statut === 'inscrit' && (i.fiche_recue ? html`<${Pastille} genre="actif">Fiche signée reçue<//>` : html`<${Pastille} genre="alerte">Fiche à recevoir<//>`)}
       </span>
     </div>
     <p class="comp-infos">${xpf(i.montant_xpf)} (${i.tarif === 'licencie' ? 'licencié' : 'non licencié'}) · règlement prévu ${MODES[i.mode_paiement] || '—'}${i.numero_facture ? ' · ' + i.numero_facture : ''}</p>
@@ -90,6 +96,8 @@ function LigneInscrit({ i, stage, ctx, agir }) {
     <p class="stage-contact">${i.mineur ? (i.autorisation_parentale ? 'Autorisation parentale : oui' : 'Autorisation parentale : non') + ' · ' : ''}Photos : ${i.autorisation_photo ? 'oui' : 'non'}</p>
     <div class="etiquettes">
       ${i.statut === 'attente' && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.stageChangerStatut(i.id, 'inscrit'), 'Inscription confirmée.')}>Valider l'inscription</button>`}
+      ${i.statut !== 'annule' && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${fiche}>Fiche d'inscription (PDF)</button>`}
+      ${i.statut === 'inscrit' && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.majInscriptionStage(i.id, { fiche_recue: !i.fiche_recue }), i.fiche_recue ? 'Fiche marquée non reçue.' : 'Fiche signée reçue.')}>${i.fiche_recue ? 'Fiche non reçue' : 'Fiche signée reçue'}</button>`}
       ${i.statut === 'inscrit' && !i.paye && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.stageMarquerPaye(i.id, true, 'sur_place'), 'Paiement enregistré.')}>Payé sur place</button>`}
       ${i.statut === 'inscrit' && !i.paye && html`<button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => lancer(() => api.stageMarquerPaye(i.id, true, 'virement'), 'Paiement enregistré.')}>Payé par virement</button>`}
       ${i.statut === 'inscrit' && i.paye && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${pdf}>Facture acquittée (PDF)</button>`}
@@ -107,11 +115,19 @@ function Detail({ stage, inscriptions, ctx, recharger, onRetour, onModifier }) {
   const payes = inscrits.filter((i) => i.paye);
   const encaisse = payes.reduce((n, i) => n + i.montant_xpf, 0);
 
+  async function toutesLesFiches() {
+    try { await telechargerFiches(stage, inscrits); } catch (e) { toast(msgErreur(e), 'erreur'); }
+  }
+  const lienStage = `${location.origin}${location.pathname}#/stages?stage=${stage.id}`;
+  async function copierLien() {
+    try { await navigator.clipboard.writeText(lienStage); toast('Lien copié : colle-le dans ta publication Facebook.'); }
+    catch { window.prompt('Copie ce lien :', lienStage); }
+  }
   function exporter() {
     telechargerCsv(`stage-${stage.nom.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`,
-      ['Statut', 'Nom', 'Prénom', 'Date de naissance', 'Sexe', 'Téléphone', 'E-mail', 'Parent / tuteur', 'Tél. parent', 'E-mail parent', 'Autorisation parentale', 'Photos', 'Tarif', 'Montant XPF', 'Règlement prévu', 'Payé', 'Date paiement', 'N° facture'],
+      ['Statut', 'Nom', 'Prénom', 'Date de naissance', 'Sexe', 'Téléphone', 'E-mail', 'Parent / tuteur', 'Tél. parent', 'E-mail parent', 'Autorisation parentale', 'Photos', 'Fiche signée reçue', 'Tarif', 'Montant XPF', 'Règlement prévu', 'Payé', 'Date paiement', 'N° facture'],
       inscriptions.map((i) => [i.statut, i.nom, i.prenom, i.date_naissance, i.sexe, i.telephone, i.email, i.representant_nom, i.representant_telephone, i.representant_email,
-        i.autorisation_parentale ? 'oui' : 'non', i.autorisation_photo ? 'oui' : 'non', i.tarif, i.montant_xpf, i.mode_paiement, i.paye ? 'oui' : 'non', i.date_paiement, i.numero_facture]));
+        i.autorisation_parentale ? 'oui' : 'non', i.autorisation_photo ? 'oui' : 'non', i.fiche_recue ? 'oui' : 'non', i.tarif, i.montant_xpf, i.mode_paiement, i.paye ? 'oui' : 'non', i.date_paiement, i.numero_facture]));
   }
   const liste = (titre, l) => l.length > 0 && html`<h2>${titre} (${l.length})</h2><ul class="liste-comp">${l.map((i) => html`<${LigneInscrit} key=${i.id} i=${i} stage=${stage} ctx=${ctx} agir=${recharger} />`)}</ul>`;
 
@@ -121,10 +137,13 @@ function Detail({ stage, inscriptions, ctx, recharger, onRetour, onModifier }) {
       <div class="match-tete"><h2 style="margin:0">${stage.nom}</h2><${Pastille} genre=${stage.statut === 'ouvert' ? 'actif' : 'neutre'}>${STATUTS[stage.statut]}<//></div>
       <p class="comp-date">${quand(stage)}${stage.lieu ? ' · ' + stage.lieu : ''}</p>
       <p class="comp-infos">Licencié ${xpf(stage.tarif_licencie)} · Non licencié ${xpf(stage.tarif_non_licencie)}</p>
-      <p><strong>${inscrits.length} / ${stage.places_max}</strong> inscrits · ${attente.length} en attente · ${payes.length} payé${payes.length > 1 ? 's' : ''} (${xpf(encaisse)} encaissés)</p>
+      <p><strong>${inscrits.length} / ${stage.places_max}</strong> inscrits · ${attente.length} en attente · ${payes.length} payé${payes.length > 1 ? 's' : ''} (${xpf(encaisse)} encaissés) · ${inscrits.filter((i) => i.fiche_recue).length} fiche${inscrits.filter((i) => i.fiche_recue).length > 1 ? 's' : ''} signée${inscrits.filter((i) => i.fiche_recue).length > 1 ? 's' : ''} reçue${inscrits.filter((i) => i.fiche_recue).length > 1 ? 's' : ''}</p>
+      ${stage.statut === 'ouvert' && html`<p class="aide">Lien direct à publier sur Facebook : ${lienStage}</p>`}
       <div class="etiquettes">
         <button class="btn btn-secondaire" type="button" onClick=${onModifier}>Modifier le stage</button>
         <button class="btn btn-secondaire" type="button" disabled=${inscriptions.length === 0} onClick=${exporter}>Exporter (CSV)</button>
+        <button class="btn btn-secondaire" type="button" disabled=${inscrits.length === 0} onClick=${toutesLesFiches}>Toutes les fiches à signer (PDF)</button>
+        <button class="btn btn-secondaire" type="button" onClick=${copierLien}>Copier le lien d'inscription</button>
       </div>
     </section>
     ${inscriptions.length === 0 && html`<p class="vide">Aucune inscription pour le moment.</p>`}

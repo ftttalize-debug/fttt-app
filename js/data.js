@@ -106,6 +106,7 @@ export const api = {
   },
   creerStage: async (v) => { const { data, error } = await sb.from('stages').insert(v).select(); if (error) throw error; return data[0]; },
   majStage: (id, patch) => modifier(sb.from('stages').update(patch).eq('id', id)),
+  majInscriptionStage: (id, patch) => modifier(sb.from('inscriptions_stage').update(patch).eq('id', id)),
   stageMarquerPaye: (id, paye, mode) => appeler('stage_marquer_paye', { p_id: id, p_paye: paye, p_mode: mode || null, p_date: null }),
   stageChangerStatut: (id, statut) => appeler('stage_changer_statut', { p_id: id, p_statut: statut }),
   clePublicPush: () => appeler('cle_publique_push', {}),
