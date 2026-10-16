@@ -121,7 +121,7 @@ const norme = (f) => ({
   date_limite_inscription: f.date_limite_inscription || null, ouverte_a_tous: !!f.ouverte_a_tous,
   // Envoyés seulement s'ils sont renseignés : le site reste utilisable avant le script 026.
   ...(f.genre !== 'ouvert' ? { genre: f.genre } : {}), ...(f.categorie_max ? { categorie_max: f.categorie_max } : {}), ...(f.categorie_min ? { categorie_min: f.categorie_min } : {}),
-  ...(/^\d+$/.test(String(f.points_max).trim()) ? { points_max: parseInt(f.points_max, 10) } : {}), ...(f.inscription_federation ? { inscription_federation: true } : {}), ...(f.inscription_athletes ? {} : { inscription_athletes: false }),
+  ...(/^\d+$/.test(String(f.points_max).trim()) ? { points_max: parseInt(f.points_max, 10) } : {}), inscription_federation: !!f.inscription_federation, inscription_athletes: f.inscription_athletes !== false,
   ...(f.type === 'equipe' && /^\d+$/.test(f.nb_simples) ? { nb_simples: parseInt(f.nb_simples, 10) } : {}),
   ...(f.type === 'equipe' && /^\d+$/.test(f.nb_doubles) ? { nb_doubles: parseInt(f.nb_doubles, 10) } : {})
 });
@@ -209,14 +209,20 @@ function Formulaire({ ctx, c }) {
         <input id="p-montant" type="text" inputmode="numeric" disabled=${dis} value=${f.montant_xpf} onInput=${(e) => maj({ montant_xpf: e.target.value })} /><//>
       <${Champ} id="p-limite" libelle="Date limite d'inscription" aide="Après cette date, les clubs ne peuvent plus inscrire ni modifier." erreur=${erreurs.limite}>
         <input id="p-limite" type="date" disabled=${dis} value=${f.date_limite_inscription} onInput=${(e) => maj({ date_limite_inscription: e.target.value })} /><//>
-      <div class="plein"><div class="case">
-        <input id="p-fed" type="checkbox" disabled=${dis} checked=${f.inscription_federation} onChange=${(e) => maj({ inscription_federation: e.target.checked })} />
-        <label for="p-fed">Inscriptions réservées à la fédération (ni les clubs ni les athlètes ne peuvent s'inscrire)</label>
-      </div></div>
-      <div class="plein"><div class="case">
-        <input id="p-ath" type="checkbox" disabled=${dis} checked=${f.inscription_athletes} onChange=${(e) => maj({ inscription_athletes: e.target.checked })} />
-        <label for="p-ath">Les athlètes peuvent s'inscrire eux-mêmes (décoché : seuls le cadre fédéral et les responsables de club inscrivent)</label>
-      </div></div>
+      <div class="plein"><fieldset class="champ">
+        <legend>Qui peut inscrire ?</legend>
+        <p class="aide">Le cadre fédéral peut toujours inscrire. Si tu décoches tout, seule la fédération inscrit.</p>
+        <div class="case">
+          <input id="p-clubs" type="checkbox" disabled=${dis} checked=${!f.inscription_federation}
+            onChange=${(e) => maj(e.target.checked ? { inscription_federation: false } : { inscription_federation: true, inscription_athletes: false })} />
+          <label for="p-clubs">Les responsables de club</label>
+        </div>
+        <div class="case">
+          <input id="p-ath" type="checkbox" disabled=${dis || f.inscription_federation} checked=${!f.inscription_federation && f.inscription_athletes}
+            onChange=${(e) => maj({ inscription_athletes: e.target.checked })} />
+          <label for="p-ath">Les athlètes eux-mêmes (« Je m'inscris »)</label>
+        </div>
+      </fieldset></div>
       <div class="plein"><div class="case">
         <input id="p-tous" type="checkbox" disabled=${dis} checked=${f.ouverte_a_tous} onChange=${(e) => maj({ ouverte_a_tous: e.target.checked })} />
         <label for="p-tous">Ouverte à tous (toutes les licences peuvent s'inscrire, y compris loisir et événementielle)</label>
