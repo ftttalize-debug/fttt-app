@@ -48,7 +48,7 @@ Il suffit de saisir vos coordonnées et celles de votre enfant, puis de cocher l
         method: 'POST',
         headers: { 'api-key': cle, 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'FTTT', email: 'no-reply@fttt.pf' }, replyTo: { email: 'contact@fttt.pf', name: 'FTTT' },
+          sender: { name: 'FTTT', email: 'no-reply@fttt.pf' }, replyTo: { email: 'fttt.secretariat@gmail.com', name: 'FTTT' },
           to: [{ email: g[0].email }], subject: `Inscription au ${s.nom} (FTTT)`, htmlContent: html
         })
       });
