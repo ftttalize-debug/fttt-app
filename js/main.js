@@ -39,7 +39,7 @@ function useRoute() {
   return route;
 }
 
-const libelleRole = (ctx) => (ctx.estCadre ? 'Cadre fédéral' : ctx.estResponsable ? 'Responsable de club' : 'Licencié');
+const libelleRole = (ctx) => (ctx.estCadre ? 'Cadre fédéral' : ctx.estResponsable ? 'Responsable de club' : ctx.estJuge ? 'Juge-arbitre' : 'Licencié');
 
 function Cadre({ ctx, route, children }) {
   const [ouvert, setOuvert] = useState(false);
@@ -64,12 +64,12 @@ function Cadre({ ctx, route, children }) {
           ${lienNav('', [], 'Accueil', 'accueil')}
           ${gestion
             ? html`${lienNav('licencies', ['licencies'], 'Licenciés', 'licencies')}${lienNav('clubs', ['clubs'], 'Clubs', 'clubs')}`
-            : lienNav('profil', ['profil'], 'Ma fiche', 'profil')}
+            : !ctx.estJugeSeul && lienNav('profil', ['profil'], 'Ma fiche', 'profil')}
           ${lienNav('competitions', ['competitions'], 'Compétitions', 'competitions')}
           ${gestion && lienNav('factures', ['factures'], 'Factures', 'factures')}
           ${lienNav('saison', ['saison'], 'Calendrier', 'calendrier')}
           ${lienNav('classement', ['classement'], 'Classement', 'classement')}
-          ${lienNav('simulateur', ['simulateur'], 'Simulateur', 'points')}
+          ${!ctx.estJugeSeul && lienNav('simulateur', ['simulateur'], 'Simulateur', 'points')}
           ${ctx.estCadre && lienNav('gestion-stages', ['gestion-stages'], 'Stages', 'inscriptions')}
           ${ctx.estResponsable && !ctx.estCadre && lienNav('inviter-stage', ['inviter-stage'], 'Inviter aux stages', 'inscriptions')}
           ${ctx.estCadre && lienNav('renouvellements', ['renouvellements'], 'Renouvellements', 'licencies')}
@@ -102,6 +102,8 @@ function Pages({ ctx, route }) {
   const [p, id] = route.parts;
   const gestion = ctx.estCadre || ctx.estResponsable;
   if (!p) return html`<${PageAccueil} ctx=${ctx} />`;
+  // Le juge-arbitre n'a accès qu'aux compétitions (pour saisir les scores), au calendrier et au classement
+  if (ctx.estJugeSeul && !['competitions', 'classement', 'resultats', 'calendrier', 'saison', 'connexion'].includes(p)) return html`<${PageAccueil} ctx=${ctx} />`;
   if (p === 'profil') return html`<${PageLicencie} ctx=${ctx} id=${ctx.moi.id} />`;
   if (p === 'licencies') {
     if (id === 'nouveau') return html`<${PageNouveauLicencie} ctx=${ctx} />`;

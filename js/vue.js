@@ -76,6 +76,9 @@ export function construireContexte(data, session) {
     estCadre,
     clubsResponsable,
     estResponsable: clubsResponsable.length > 0,
+    estJuge: !!moi && juges.some((j) => j.licencie_id === moi.id),
+    // Juge-arbitre sans rôle de cadre ni de responsable : accès limité aux compétitions, au calendrier et au classement
+    estJugeSeul: !!moi && juges.some((j) => j.licencie_id === moi.id) && !estCadre && clubsResponsable.length === 0,
     aujourdhui: aujourdhuiISO()
   };
 }

@@ -1,11 +1,29 @@
 // Page d'accueil : chiffres clés de la saison.
 import { html } from '../preact.js';
-import { lien, TYPES_LICENCE, nomComplet, aujourdhuiISO } from '../lib.js';
+import { lien, TYPES_LICENCE, nomComplet, aujourdhuiISO, fmtDate } from '../lib.js';
 import { Pastille } from '../ui.js';
 import { etatCertificat } from './certificats.js';
 
 export function PageAccueil({ ctx }) {
   const { saison, licencies, moi, estCadre, estResponsable, clubs } = ctx;
+
+  if (ctx.estJugeSeul) {
+    const auj = aujourdhuiISO();
+    const miennes = (ctx.competitions || [])
+      .filter((c) => ctx.juges.some((j) => j.competition_id === c.id && j.licencie_id === moi.id))
+      .sort((a, b) => (a.date_debut < b.date_debut ? -1 : 1));
+    const aVenir = miennes.filter((c) => c.date_fin >= auj);
+    return html`<div class="page">
+      <div class="page-tete"><div><h1>Bonjour ${moi.prenom}</h1><p>Juge-arbitre · saison ${saison?.libelle}</p></div></div>
+      <div class="carte">
+        <h2>Mes compétitions</h2>
+        ${aVenir.length === 0 ? html`<p class="vide">Aucune compétition à venir où tu es désigné(e) juge-arbitre.</p>` : html`<ul class="liste-simple">
+          ${aVenir.map((c) => html`<li key=${c.id}><a href=${lien(['competitions', c.id])}><strong>${c.nom}</strong></a> · ${c.date_debut === c.date_fin ? fmtDate(c.date_debut) : `${fmtDate(c.date_debut)} au ${fmtDate(c.date_fin)}`}</li>`)}
+        </ul>`}
+        <div class="actions"><a class="btn btn-primaire" href=${lien(['competitions'])}>Toutes les compétitions</a></div>
+      </div>
+    </div>`;
+  }
 
   if (!estCadre && !estResponsable) {
     return html`<div class="page">
