@@ -239,14 +239,28 @@ export function CarteRencontres({ ctx, c }) {
   const aujourdhui = aujourdhuiISO();
   const prochain = tours.find((t) => t.date_tour >= aujourdhui) || tours[tours.length - 1];
   const rencontresDe = (t) => rencontres.filter((r) => r.tour === t.nom);
+  const aValiderDe = (t) => { const ids = new Set(rencontresDe(t).map((r) => r.id)); return ctx.matchs.filter((m) => m.statut === 'saisi' && ids.has(m.rencontre_id)).map((m) => m.id); };
+  async function agirTour(fn, message) {
+    setOccupe(true);
+    try { const n = await fn(); await ctx.recharger(); toast(typeof message === 'function' ? message(n) : message); } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
+  }
   return html`<${Pliable} titre="Journées et rencontres" ouvert=${true}>
     ${tours.length === 0 && peutSaisir && html`<p class="avis">Définis d'abord les journées et leurs dates dans « Tours et dates ».</p>`}
     <p class="aide">${c.nb_simples != null || c.nb_doubles != null ? `Format : ${c.nb_simples ?? 0} simples et ${c.nb_doubles ?? 0} doubles par rencontre. ` : ''}Touche une journée pour l'ouvrir, puis une rencontre pour saisir ses matchs. Seuls les simples donnent des points (coefficient ${Number(c.coefficient).toLocaleString('fr-FR')}), à la validation.</p>
-    ${tours.map((t) => html`<${Pliable} key=${t.id} petit titre=${`${t.nom} · ${fmtDate(t.date_tour)}`}
-        resume=${`${rencontresDe(t).length} rencontre${rencontresDe(t).length > 1 ? 's' : ''}`} ouvert=${prochain?.id === t.id}>
-      ${rencontresDe(t).length === 0 ? html`<p class="aide">Aucune rencontre pour cette journée.</p>` : html`<ul class="matchs">${rencontresDe(t).map((r) => html`<${Rencontre} key=${r.id} ctx=${ctx} c=${c} r=${r} peutSaisir=${peutSaisir} />`)}</ul>`}
-      ${peutSaisir && html`<div class="actions"><button class="btn btn-primaire" type="button" disabled=${equipes.length < 2} onClick=${() => setDialogue(t.nom)}>Nouvelle rencontre · ${t.nom}</button></div>`}
-    <//>`)}
+    ${tours.map((t) => { const ferme = !!t.cloture; const saisie = peutSaisir && (!ferme || ctx.estCadre); const nbV = aValiderDe(t).length;
+      return html`<${Pliable} key=${t.id} petit titre=${`${t.nom} · ${fmtDate(t.date_tour)}`}
+        resume=${`${rencontresDe(t).length} rencontre${rencontresDe(t).length > 1 ? 's' : ''}${ferme ? ' · clôturée' : ''}`} ouvert=${prochain?.id === t.id}>
+      ${ferme && html`<p class="aide"><${Pastille} genre="alerte">Journée clôturée<//> ${ctx.estCadre ? 'Tu peux encore corriger, valider ou rouvrir.' : 'Plus de modification : la fédération va valider les matchs.'}</p>`}
+      ${rencontresDe(t).length === 0 ? html`<p class="aide">Aucune rencontre pour cette journée.</p>` : html`<ul class="matchs">${rencontresDe(t).map((r) => html`<${Rencontre} key=${r.id} ctx=${ctx} c=${c} r=${r} peutSaisir=${saisie} />`)}</ul>`}
+      <div class="actions">
+        ${saisie && html`<button class="btn btn-primaire" type="button" disabled=${equipes.length < 2} onClick=${() => setDialogue(t.nom)}>Nouvelle rencontre · ${t.nom}</button>`}
+        ${peutSaisir && !ferme && rencontresDe(t).length > 0 && html`<button class="btn btn-secondaire" type="button" disabled=${occupe}
+          onClick=${() => { if (window.confirm(`Clôturer ${t.nom} pour ce tableau ? Les juges ne pourront plus modifier ses matchs.`)) agirTour(() => api.cloturerTour(t.id), `${t.nom} clôturée.`); }}>Clôturer la journée</button>`}
+        ${ctx.estCadre && ferme && nbV > 0 && html`<button class="btn btn-secondaire" type="button" disabled=${occupe}
+          onClick=${() => agirTour(() => api.validerMatchs(c.id, aValiderDe(t)), (n) => `${n} match${n > 1 ? 's' : ''} validé${n > 1 ? 's' : ''}.`)}>Valider la journée (${nbV})</button>`}
+        ${ctx.estCadre && ferme && html`<button class="btn btn-lien" type="button" disabled=${occupe} onClick=${() => agirTour(() => api.rouvrirTour(t.id), `${t.nom} rouverte.`)}>Rouvrir la journée</button>`}
+      </div>
+    <//>`; })}
     <${Classement} ctx=${ctx} c=${c} equipes=${equipes} rencontres=${rencontres} />
     <${Effectifs} ctx=${ctx} c=${c} equipes=${equipes} peut=${ctx.estCadre} />
     ${ctx.estCadre && aValider > 0 && html`<div class="actions"><button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${valider}>Valider les matchs saisis (${aValider})</button></div>`}

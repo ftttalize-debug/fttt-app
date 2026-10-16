@@ -169,7 +169,9 @@ export const api = {
     }),
   supprimerMatch: (id) => appeler('supprimer_match', { p_match: id }),
   rejeterMatch: (id) => appeler('rejeter_match', { p_match: id }),
-  validerMatchs: (competition) => appeler('valider_matchs', { p_competition: competition }),
+  validerMatchs: (competition, matchs) => appeler('valider_matchs', { p_competition: competition, p_matchs: matchs || null }),
+  cloturerTour: (tour) => appeler('cloturer_tour', { p_tour: tour }),
+  rouvrirTour: (tour) => appeler('rouvrir_tour', { p_tour: tour }),
   invaliderMatch: (id) => appeler('invalider_match', { p_match: id }),
   ajouterJuge: async (competition, licencie) => {
     const { error } = await sb.from('competition_juges').insert({ competition_id: competition, licencie_id: licencie });
