@@ -1,4 +1,4 @@
-// Fonction Supabase « envoyer-invitations-stage » : envoie par e-mail (Brevo) les invitations de stage mises en file par le script 045.
+// Fonction Supabase « rapid-processor » (nom attribué par Supabase ; code du dossier envoyer-invitations-stage) : envoie par e-mail (Brevo) les invitations de stage mises en file par le script 045.
 // À déployer avec « Verify JWT » désactivé. Sans danger : elle n'envoie que des lignes déjà autorisées par la base
 // (statut « a_envoyer »), et chaque ligne est réservée avant l'envoi, donc jamais envoyée deux fois.
 // Secret à créer dans Supabase (Edge Functions → Secrets) : BREVO_API_KEY.
