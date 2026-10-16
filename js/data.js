@@ -86,6 +86,7 @@ export const api = {
   moisPublies: () => appeler('mois_publies', {}),
   classementPublic: (mois) => appeler('classement_public', { p_mois: mois || null }),
   calendrierPublic: () => appeler('calendrier_public', {}),
+  evenementsCalendrier: () => appeler('evenements_calendrier_public', {}),
   clePublicPush: () => appeler('cle_publique_push', {}),
   abonnerPush: (endpoint, p256dh, auth) => appeler('enregistrer_abonnement_push', { p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth }),
   desabonnerPush: (endpoint) => appeler('supprimer_abonnement_push', { p_endpoint: endpoint }),

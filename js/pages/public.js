@@ -235,7 +235,7 @@ function ResultatsCompetition({ initial }) {
 }
 
 export function OngletsPublics({ actif }) {
-  const o = [['monprofil', 'Mon profil'], ['classement', 'Classement'], ['resultats', 'Résultats'], ['calendrier', 'Calendrier'], ['simulateur', 'Simulateur'], ['sinscrire', 'Je m\'inscris']];
+  const o = [['monprofil', 'Mon profil'], ['classement', 'Classement'], ['resultats', 'Résultats'], ['calendrier', 'Calendrier'], ['saison', 'Saison'], ['simulateur', 'Simulateur'], ['sinscrire', 'Je m\'inscris']];
   return html`<div class="puces" role="group" aria-label="Section">
     ${o.map(([k, t]) => html`<a class="puce" aria-pressed=${actif === k} href=${'#/' + k}>${t}</a>`)}
   </div>`;

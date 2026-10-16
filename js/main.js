@@ -14,6 +14,7 @@ import { PageFactures } from './pages/factures.js';
 import { PagePublique } from './pages/public.js';
 import { PageSimulateur } from './pages/simulateur.js';
 import { PageCalendrier } from './pages/calendrier.js';
+import { PageSaison } from './pages/saison.js';
 import { PageSinscrire } from './pages/sinscrire.js';
 import { PageMonProfil } from './pages/monprofil.js';
 import { lireIdentite } from './identite.js';
@@ -105,6 +106,7 @@ function Pages({ ctx, route }) {
   if (p === 'competitions') return id ? html`<${PageCompetition} ctx=${ctx} id=${id} />` : html`<${PageCompetitions} ctx=${ctx} route=${route} />`;
   if (p === 'classement' || p === 'resultats') return html`<${PagePublique} route=${route} connecte=${true} />`;
   if (p === 'calendrier') return html`<${PageCalendrier} />`;
+  if (p === 'saison') return html`<${PageSaison} />`;
   if (p === 'sinscrire') return html`<${PageSinscrire} />`;
   if (p === 'monprofil') return html`<${PageMonProfil} />`;
   if (p === 'simulateur') return html`<${PageSimulateur} route=${route} />`;
@@ -163,6 +165,7 @@ function App() {
     const p0 = route.parts[0];
     if (p0 !== 'connexion') {
       const page = p0 === 'calendrier' ? html`<${PageCalendrier} />`
+        : p0 === 'saison' ? html`<${PageSaison} />`
         : p0 === 'sinscrire' ? html`<${PageSinscrire} />`
         : p0 === 'monprofil' || (!p0 && lireIdentite()?.durable) ? html`<${PageMonProfil} />`
         : p0 === 'simulateur' ? html`<${PageSimulateur} route=${route} />`
