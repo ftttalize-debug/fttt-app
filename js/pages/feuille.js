@@ -22,16 +22,17 @@ const MODELES = {
 };
 export const modeleFeuille = (c) => MODELES[`${c.nb_simples}/${c.nb_doubles}`] || null;
 
-/** Lit « -7 7 9 -2 8 » : renvoie les manches [scoreA, scoreB] et le score en sets. */
+/** Lit « 11-7 8-11 11-9 » : chaque manche s'écrit avec les DEUX scores (joueur de gauche d'abord). */
 function lire(texte, n) {
   const t = (texte || '').trim();
   if (!t) return { vide: true };
   const manches = [];
   for (const tok of t.split(/[\s,;]+/).filter(Boolean)) {
-    if (!/^-?\d{1,2}$/.test(tok)) return { erreur: `« ${tok} » n'est pas un score.` };
-    const v = Math.abs(Number(tok));
-    const win = v <= 9 ? 11 : v + 2;
-    manches.push(tok.startsWith('-') ? [v, win] : [win, v]);
+    const m = /^(\d{1,2})[-:/.](\d{1,2})$/.exec(tok);
+    if (!m) return { erreur: `« ${tok} » : écris les deux scores, par exemple 11-7.` };
+    const x = Number(m[1]), y = Number(m[2]), g = Math.max(x, y), p = Math.min(x, y);
+    if (g < 11 || g - p < 2 || (g > 11 && g - p !== 2)) return { erreur: `« ${tok} » n'est pas un score de manche possible.` };
+    manches.push([x, y]);
   }
   let sa = 0, sb = 0;
   for (let i = 0; i < manches.length; i += 1) {
@@ -41,7 +42,7 @@ function lire(texte, n) {
   if (sa !== n && sb !== n) return { erreur: `Il manque des manches (${sa}-${sb} pour l'instant).` };
   return { manches, sa, sb };
 }
-const notation = (m) => m.manches.map((x) => (x.score_a > x.score_b ? String(x.score_b) : '-' + x.score_a)).join(' ');
+const notation = (m) => m.manches.map((x) => `${x.score_a}-${x.score_b}`).join(' ');
 const nomJ = (ctx, id) => { const l = ctx.licencieParId.get(id); return l ? nomComplet(l) : 'Joueur'; };
 
 export function FeuilleRencontre({ ctx, c, r, modele, listeA, listeB, matchs, nomA, nomB, onEdit }) {
@@ -106,7 +107,7 @@ export function FeuilleRencontre({ ctx, c, r, modele, listeA, listeB, matchs, no
       <span><strong>Sets gagnants</strong></span>
       ${[3, 4].map((v) => html`<button key=${v} type="button" class="puce" aria-pressed=${n === v} disabled=${matchs.length > 0 && v !== n && false} onClick=${() => setN(v)}>${v}</button>`)}
     </div>
-    <p class="aide">Tape les scores comme sur la feuille papier, manche par manche : un nombre seul = <strong>le 1er joueur gagne</strong> la manche (c'est le score de son adversaire), un nombre avec <strong>−</strong> = il la perd (c'est son score). Exemple : <strong>−7 7 9 −2 8</strong>. Valide avec Entrée : le match est enregistré et tu passes au suivant.</p>
+    <p class="aide">Tape les scores de chaque manche avec <strong>les deux scores</strong>, le 1er joueur en premier, séparés par un espace. Exemple : <strong>11-7 8-11 11-9 11-5</strong>. Valide avec Entrée : le match est enregistré et tu passes au suivant.</p>
     <ol class="lf-liste">${lignes.map((L) => {
       const s = L.saved; const fixe = s && s.statut === 'valide';
       const valeur = edits[L.i] ?? (s && !s.forfait_cote ? notation(s) : '');
@@ -126,7 +127,7 @@ export function FeuilleRencontre({ ctx, c, r, modele, listeA, listeB, matchs, no
         ${s && s.forfait_cote
           ? html`<div class="lf-etat"><${Pastille} genre="alerte">Forfait de ${s.forfait_cote === 'A' ? nomA : nomB}<//> <small>3-0 pour l'adversaire, aucun point</small></div>`
           : html`<input class="lf-input" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="next"
-              placeholder="ex. −7 7 9 −2 8" aria-label=${`Scores du match ${L.i + 1}`} disabled=${fixe || occupe === L.i} value=${valeur}
+              placeholder="ex. 11-7 8-11 11-9 11-5" aria-label=${`Scores du match ${L.i + 1}`} disabled=${fixe || occupe === L.i} value=${valeur}
               onInput=${(e) => setEdits((x) => ({ ...x, [L.i]: e.target.value.replace(/[−–—]/g, '-') }))}
               onBlur=${() => enregistrer(L)} onKeyDown=${(e) => { if (e.key === 'Enter') { e.preventDefault(); enregistrer(L).then(() => suivant(e)); } }} />`}
         <div class="lf-etat">
