@@ -15,6 +15,8 @@ import { PagePublique } from './pages/public.js';
 import { PageSimulateur } from './pages/simulateur.js';
 import { PageCalendrier } from './pages/calendrier.js';
 import { PageSaison } from './pages/saison.js';
+import { PageStages } from './pages/stages.js';
+import { PageGestionStages } from './pages/gestion_stages.js';
 import { PageSinscrire } from './pages/sinscrire.js';
 import { PageMonProfil } from './pages/monprofil.js';
 import { lireIdentite } from './identite.js';
@@ -67,6 +69,7 @@ function Cadre({ ctx, route, children }) {
           ${lienNav('saison', ['saison'], 'Saison', 'calendrier')}
           ${lienNav('classement', ['classement'], 'Classement', 'classement')}
           ${lienNav('simulateur', ['simulateur'], 'Simulateur', 'points')}
+          ${ctx.estCadre && lienNav('gestion-stages', ['gestion-stages'], 'Stages', 'inscriptions')}
           ${ctx.estCadre && lienNav('renouvellements', ['renouvellements'], 'Renouvellements', 'licencies')}
           ${ctx.estCadre && lienNav('points', ['points'], 'Points', 'journal')}
           ${ctx.estCadre && lienNav('comptes', ['comptes'], 'Comptes', 'profil')}
@@ -108,6 +111,8 @@ function Pages({ ctx, route }) {
   if (p === 'classement' || p === 'resultats') return html`<${PagePublique} route=${route} connecte=${true} />`;
   if (p === 'calendrier') return html`<${PageCalendrier} />`;
   if (p === 'saison') return html`<${PageSaison} />`;
+  if (p === 'stages') return html`<${PageStages} />`;
+  if (p === 'gestion-stages' && ctx.estCadre) return html`<${PageGestionStages} ctx=${ctx} />`;
   if (p === 'sinscrire') return html`<${PageSinscrire} />`;
   if (p === 'monprofil') return html`<${PageMonProfil} />`;
   if (p === 'simulateur') return html`<${PageSimulateur} route=${route} />`;
@@ -167,6 +172,7 @@ function App() {
     if (p0 !== 'connexion') {
       const page = p0 === 'calendrier' ? html`<${PageCalendrier} />`
         : p0 === 'saison' ? html`<${PageSaison} />`
+        : p0 === 'stages' ? html`<${PageStages} />`
         : p0 === 'sinscrire' ? html`<${PageSinscrire} />`
         : p0 === 'monprofil' || (!p0 && lireIdentite()?.durable) ? html`<${PageMonProfil} />`
         : p0 === 'simulateur' ? html`<${PageSimulateur} route=${route} />`

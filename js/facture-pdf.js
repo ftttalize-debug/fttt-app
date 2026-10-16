@@ -2,8 +2,8 @@
 import { fmtDate, nomComplet } from './lib.js';
 
 const JSPDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-const INDIGO = [72, 58, 130];
-const BRUN = [74, 46, 34];
+export const INDIGO = [72, 58, 130];
+export const BRUN = [74, 46, 34];
 
 export function chargerJsPdf() {
   if (window.jspdf) return Promise.resolve(window.jspdf);
@@ -25,8 +25,8 @@ export async function logo() {
   } catch { return null; }
 }
 
-const t = (s) => String(s ?? '').replace(/[’‘]/g, "'").replace(/[–—]/g, '-').replace(/ | /g, ' ');
-const xpf = (n) => t(`${Number(n || 0).toLocaleString('fr-FR')} F CFP`);
+export const t = (s) => String(s ?? '').replace(/[’‘]/g, "'").replace(/[–—]/g, '-').replace(/ | /g, ' ');
+export const xpf = (n) => t(`${Number(n || 0).toLocaleString('fr-FR')} F CFP`);
 
 /** Construit le document PDF. `donnees` : { facture, club, competition, joueurs: [{nom, points}] } */
 export async function construireFacture(donnees) {

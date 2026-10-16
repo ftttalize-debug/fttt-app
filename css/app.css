@@ -372,3 +372,14 @@ a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(-
   .sg-lien { font-size: .9rem; padding: 4px 8px; min-height: 33px; }
   .sg-multi .sg-lien { font-size: .85rem; border-left: 0; border-top: 1px solid rgba(255, 255, 255, .8); }
 }
+
+/* ---------- Stages ---------- */
+.liste-simple { margin: 6px 0 10px; padding-left: 20px; }
+.comp-infos { font-size: 15px; color: var(--brun-doux); margin: 4px 0 10px; }
+.stage-ligne { padding: 12px 14px; border: 1px solid var(--trait); border-radius: 12px; background: var(--blanc); }
+.stage-ligne + .stage-ligne { margin-top: 8px; }
+.stage-ligne .etiquettes { margin-top: 8px; }
+.stage-ligne.attente { background: var(--dore-teinte); }
+.stage-ligne.annule { opacity: .6; }
+.stage-contact { font-size: 14px; color: var(--brun-doux); margin: 4px 0 0; }
+.case + .champ { margin-top: 14px; }

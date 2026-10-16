@@ -87,6 +87,27 @@ export const api = {
   classementPublic: (mois) => appeler('classement_public', { p_mois: mois || null }),
   calendrierPublic: () => appeler('calendrier_public', {}),
   evenementsCalendrier: () => appeler('evenements_calendrier_public', {}),
+  stagesPublics: () => appeler('stages_publics', {}),
+  sinscrireStage: (a) => appeler('sinscrire_stage', {
+    p_stage: a.stage, p_prenom: a.prenom, p_nom: a.nom, p_naissance: a.naissance, p_sexe: a.sexe,
+    p_email: a.email || null, p_telephone: a.telephone || null,
+    p_representant_nom: a.representantNom || null, p_representant_telephone: a.representantTelephone || null, p_representant_email: a.representantEmail || null,
+    p_autorisation_parentale: !!a.autorisationParentale, p_autorisation_photo: !!a.autorisationPhoto,
+    p_mode_paiement: a.modePaiement, p_site: a.site || null
+  }),
+  stagesCadre: async () => {
+    const [s, i] = await Promise.all([
+      sb.from('stages').select('*').order('date_debut'),
+      sb.from('inscriptions_stage').select('*').order('created_at')
+    ]);
+    if (s.error) throw s.error;
+    if (i.error) throw i.error;
+    return { stages: s.data, inscriptions: i.data };
+  },
+  creerStage: async (v) => { const { data, error } = await sb.from('stages').insert(v).select(); if (error) throw error; return data[0]; },
+  majStage: (id, patch) => modifier(sb.from('stages').update(patch).eq('id', id)),
+  stageMarquerPaye: (id, paye, mode) => appeler('stage_marquer_paye', { p_id: id, p_paye: paye, p_mode: mode || null, p_date: null }),
+  stageChangerStatut: (id, statut) => appeler('stage_changer_statut', { p_id: id, p_statut: statut }),
   clePublicPush: () => appeler('cle_publique_push', {}),
   abonnerPush: (endpoint, p256dh, auth) => appeler('enregistrer_abonnement_push', { p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth }),
   desabonnerPush: (endpoint) => appeler('supprimer_abonnement_push', { p_endpoint: endpoint }),

@@ -29,7 +29,7 @@ function saisonDuJour() {
 }
 
 /** Regroupe les compétitions par événement ; une compétition par équipes apparaît à la date de chaque tour. */
-function construire(comps, evts) {
+function construire(comps, evts, stagesOuverts = new Set()) {
   const items = [];
   const groupes = new Map();
   for (const c of comps) { const k = c.evenement_id || c.id; if (!groupes.has(k)) groupes.set(k, []); groupes.get(k).push(c); }
@@ -57,7 +57,7 @@ function construire(comps, evts) {
       items.push({ cle: `${k}|${cle}`, titre, detail: noms.length > 4 ? `${noms.length} tableaux` : noms.join(', '), debut: p.debut, fin: p.fin, type: 'competition', pageComp: true });
     }
   }
-  for (const e of evts) items.push({ cle: e.id, titre: e.nom, detail: e.lieu || '', debut: e.date_debut, fin: e.date_fin, type: e.categorie, annule: !!e.annule });
+  for (const e of evts) items.push({ cle: e.id, titre: e.nom, detail: e.lieu || '', debut: e.date_debut, fin: e.date_fin, type: e.categorie, annule: !!e.annule, pageStage: stagesOuverts.has(e.id) });
   return items;
 }
 
@@ -84,8 +84,8 @@ const infobulle = (it) => `${it.titre}${it.detail ? ' – ' + it.detail : ''} ($
 function Bloc({ it }) {
   const [, classe] = TYPES[it.type] || TYPES.evenement;
   const texte = html`<span class="sg-texte">${it.titre}${it.annule ? ' (annulé)' : ''}</span>`;
-  return it.pageComp
-    ? html`<a class=${'sg-lien ' + classe + (it.annule ? ' sg-annule' : '')} href=${lien(['calendrier'])} title=${infobulle(it)}>${texte}</a>`
+  return it.pageComp || it.pageStage
+    ? html`<a class=${'sg-lien ' + classe + (it.annule ? ' sg-annule' : '')} href=${lien([it.pageStage ? 'stages' : 'calendrier'])} title=${infobulle(it) + (it.pageStage ? ' – inscriptions ouvertes' : '')}>${texte}</a>`
     : html`<span class=${'sg-lien ' + classe + (it.annule ? ' sg-annule' : '')} title=${infobulle(it)}>${texte}</span>`;
 }
 
@@ -135,6 +135,7 @@ export function PageSaison() {
   const [an, setAn] = useState(saisonDuJour());
   const [comps, setComps] = useState(null);
   const [evts, setEvts] = useState([]);
+  const [stagesOuverts, setStagesOuverts] = useState(() => new Set());
   const [erreur, setErreur] = useState('');
   const [petit, setPetit] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 820px)').matches);
   const mois = useMemo(() => moisDeSaison(an), [an]);
@@ -147,6 +148,7 @@ export function PageSaison() {
   useEffect(() => {
     api.calendrierPublic().then(setComps).catch((e) => setErreur(msgErreur(e)));
     api.evenementsCalendrier().then(setEvts).catch(() => setEvts([]));
+    api.stagesPublics().then((l) => setStagesOuverts(new Set(l.map((x) => x.evenement_id).filter(Boolean)))).catch(() => {});
   }, []);
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -156,7 +158,7 @@ export function PageSaison() {
     return () => q.removeEventListener('change', f);
   }, []);
 
-  const items = useMemo(() => (comps ? construire(comps, evts || []) : []), [comps, evts]);
+  const items = useMemo(() => (comps ? construire(comps, evts || [], stagesOuverts) : []), [comps, evts, stagesOuverts]);
   const idx = useMemo(() => indexer(items, mois), [items, mois]);
   const aujourdhui_ = aujourdhui();
 
