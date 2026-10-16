@@ -4,7 +4,7 @@ import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
 import { msgErreur, lien, aujourdhuiISO, fmtDate } from '../lib.js';
 import { Chargement } from '../ui.js';
-import { OngletsPublics } from './public.js';
+import { OngletsPublics, BoutonAlertes } from './public.js';
 
 const MOIS = ['Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin'];
 const JOURS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
@@ -163,8 +163,9 @@ export function PageSaison() {
   const aujourdhui_ = aujourdhui();
 
   return html`<div class="page page-large">
-    <div class="page-tete"><div><h1>Saison ${an}-${an + 1}</h1><p>Compétitions, stages et événements de la saison</p></div></div>
+    <div class="page-tete"><div><h1>Calendrier ${an}-${an + 1}</h1><p>Compétitions, stages et événements de la saison</p></div></div>
     <${OngletsPublics} actif="saison" />
+    <${BoutonAlertes} />
     <div class="sg-barre">
       <button class="btn btn-secondaire" type="button" onClick=${() => setAn(an - 1)} aria-label="Saison précédente">◀ ${an - 1}-${an}</button>
       <button class="btn btn-secondaire" type="button" onClick=${() => setAn(an + 1)} aria-label="Saison suivante">${an + 1}-${an + 2} ▶</button>

@@ -3,7 +3,7 @@ import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
 import { fmtDate, aujourdhuiISO, msgErreur, lien } from '../lib.js';
 import { Chargement, Pastille } from '../ui.js';
-import { OngletsPublics } from './public.js';
+import { OngletsPublics, BoutonAlertes } from './public.js';
 
 const TYPES = { simple: 'Simple', double: 'Double', equipe: 'Par équipes' };
 const STATUTS = { ouverte: ['actif', 'Inscriptions ouvertes'], cloturee: ['neutre', 'Inscriptions closes'], terminee: ['archive', 'Terminée'] };
@@ -80,8 +80,9 @@ export function PageCalendrier() {
     return [...m.entries()].map(([k, g]) => (g.length > 1 ? html`<${CarteEvenement} key=${k} groupe=${g} />` : html`<${Carte} key=${k} c=${g[0]} />`));
   };
   return html`<div class="page">
-    <div class="page-tete"><div><h1>Calendrier</h1><p>Compétitions de la Fédération Tahitienne de Tennis de Table</p></div></div>
+    <div class="page-tete"><div><h1>Compétitions</h1><p>Compétitions de la Fédération Tahitienne de Tennis de Table</p></div></div>
     <${OngletsPublics} actif="calendrier" />
+    <${BoutonAlertes} />
     ${erreur && html`<p class="erreur" role="alert">${erreur}</p>`}
     ${!liste && !erreur && html`<${Chargement} />`}
     ${liste && liste.length === 0 && html`<p class="vide">Aucune compétition n'est au calendrier pour le moment.</p>`}

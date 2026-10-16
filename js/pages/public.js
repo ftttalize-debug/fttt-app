@@ -235,7 +235,7 @@ function ResultatsCompetition({ initial }) {
 }
 
 export function OngletsPublics({ actif }) {
-  const o = [['monprofil', 'Mon profil'], ['classement', 'Classement'], ['resultats', 'Résultats'], ['calendrier', 'Calendrier'], ['saison', 'Saison'], ['stages', 'Stages'], ['simulateur', 'Simulateur'], ['sinscrire', 'Je m\'inscris']];
+  const o = [['monprofil', 'Mon profil'], ['classement', 'Classement'], ['resultats', 'Résultats'], ['calendrier', 'Compétitions'], ['saison', 'Calendrier'], ['stages', 'Stages'], ['simulateur', 'Simulateur'], ['sinscrire', 'Je m\'inscris']];
   return html`<div class="puces" role="group" aria-label="Section">
     ${o.map(([k, t]) => html`<a class="puce" aria-pressed=${actif === k} href=${'#/' + k}>${t}</a>`)}
   </div>`;
@@ -327,7 +327,6 @@ export function PagePublique({ route, connecte }) {
     <div class="page-tete"><div><h1>${onglet === 'classement' ? 'Classement' : 'Résultats'}</h1><p>Fédération Tahitienne de Tennis de Table</p></div></div>
     <${OngletsPublics} actif=${onglet} />
     <${BoutonInstaller} />
-    <${BoutonAlertes} />
     ${onglet === 'classement' ? html`<${Classement} />` : html`<${Resultats} initial=${route.query?.competition} />`}
   </div>`;
 }
