@@ -2,7 +2,7 @@
 // la catégorie, les points et les résultats validés sont affichés.
 import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
-import { norm, fmtPts, fmtVariation, CATEGORIES, msgErreur, lien, telechargerCsv } from '../lib.js';
+import { norm, fmtPts, fmtVariation, CATEGORIES, msgErreur, lien } from '../lib.js';
 import { Chargement, BadgePts } from '../ui.js';
 import { ListeMatchs, bilanHisto } from './joueur.js';
 
@@ -62,9 +62,7 @@ function Classement() {
           <option value="">Dames et messieurs</option><option value="F">Dames</option><option value="M">Messieurs</option></select>
       </div>
     </section>
-    <p class="compte-resultats" role="status">${liste.length} joueur${liste.length > 1 ? 's' : ''}
-      <button class="btn btn-lien" type="button" id="exp-classement" onClick=${() => telechargerCsv(`classement-${choix}.csv`, ['Rang', 'Nom', 'Prénom', 'Club', 'Catégorie', 'Sexe', 'Points'],
-        liste.map((l) => [l.rang, l.nom, l.prenom, l.club || '', l.categorie, l.sexe, fmtPts(l.points)]))}>Exporter (CSV)</button></p>
+    <p class="compte-resultats" role="status">${liste.length} joueur${liste.length > 1 ? 's' : ''}</p>
     <ul class="liste">
       ${liste.slice(0, nb).map((l) => html`<li key=${l.id || l.rang + l.nom + l.prenom}>
         <a class="ligne ligne-classement" href=${lien(['joueur', l.id])}>
@@ -208,12 +206,6 @@ function ResultatsCompetition({ initial }) {
     });
     return [...m.values()].filter((x) => x.A && x.B);
   }, [lignes]);
-  function exporter() {
-    const comp = comps.find((c) => c.id === choix);
-    telechargerCsv(`resultats-${norm(comp?.nom || '').replace(/[^a-z0-9]+/g, '-')}.csv`,
-      ['Compétition', 'Tour', 'Type', 'Joueur(s) A', 'Sets A', 'Points A', 'Joueur(s) B', 'Sets B', 'Points B', 'Manches (vues de A)'],
-      matchs.map((x) => [comp?.nom || '', x.tour || '', x.double ? 'Double' : 'Simple', x.A.joueurs, x.A.sets_gagnes, x.A.points ?? '', x.B.joueurs, x.B.sets_gagnes, x.B.points ?? '', x.manches]));
-  }
   if (erreur) return html`<p class="erreur" role="alert">${erreur}</p>`;
   if (comps === null) return html`<${Chargement} />`;
   if (!comps.length) return html`<p class="vide">Aucun résultat publié pour le moment.</p>`;
@@ -221,7 +213,6 @@ function ResultatsCompetition({ initial }) {
     <section class="carte filtres"><select aria-label="Compétition" value=${choix} onChange=${(e) => setChoix(e.target.value)}>
       ${comps.map((c) => html`<option key=${c.id} value=${c.id}>${c.nom} · ${new Date(c.date_debut + 'T12:00:00').toLocaleDateString('fr-FR')}</option>`)}</select></section>
     ${parEquipes && html`<${ResultatsEquipes} competition=${choix} />`}
-    ${!parEquipes && matchs.length > 0 && html`<p><button class="btn btn-secondaire" type="button" id="exp-resultats" onClick=${exporter}>Exporter (CSV)</button></p>`}
     ${parEquipes ? null : lignes === null ? html`<${Chargement} />` : matchs.length === 0 ? html`<p class="vide">Aucun résultat validé pour cette compétition.</p>` : html`<ul class="matchs">
       ${matchs.map((x) => html`<li class="match" key=${x.id}>
         <div class="match-tete"><strong>${x.tour || 'Match'}</strong>${x.double ? html`<span class="pastille">Double</span>` : ''}</div>
