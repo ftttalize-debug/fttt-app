@@ -95,6 +95,7 @@ export function PageCompetitions({ ctx, route }) {
             ${c.categorie_min && html`<${Pastille}>Vétérans<//>`}
             ${c.points_max != null && html`<${Pastille}>≤ ${c.points_max} pts<//>`}
             ${c.inscription_federation && html`<${Pastille}>Inscription fédération<//>`}
+            ${!c.inscription_federation && c.inscription_athletes === false && html`<${Pastille}>Inscription par les clubs<//>`}
             ${c.genre && c.genre !== 'ouvert' && html`<${Pastille}>${GENRES[c.genre].split(' (')[0]}<//>`}
             <${Pastille}>Coef. ${Number(c.coefficient).toLocaleString('fr-FR')}<//>
           </span>
@@ -106,12 +107,12 @@ export function PageCompetitions({ ctx, route }) {
 
 const vide = (ctx) => ({
   nom: '', saison_id: ctx.saison?.id || '', lieu: '', date_debut: '', date_fin: '', type: 'simple',
-  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: '', categorie_min: '', points_max: '', inscription_federation: false, nb_simples: '', nb_doubles: ''
+  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: '', categorie_min: '', points_max: '', inscription_federation: false, inscription_athletes: true, nb_simples: '', nb_doubles: ''
 });
 const depuis = (c) => ({
   nom: c.nom, saison_id: c.saison_id, lieu: c.lieu || '', date_debut: c.date_debut, date_fin: c.date_fin, type: c.type,
   coefficient: Number(c.coefficient).toFixed(2), montant_xpf: String(c.montant_xpf), date_limite_inscription: c.date_limite_inscription || '',
-  ouverte_a_tous: !!c.ouverte_a_tous, genre: c.genre || 'ouvert', categorie_max: c.categorie_max || '', categorie_min: c.categorie_min || '', points_max: c.points_max == null ? '' : String(c.points_max), inscription_federation: !!c.inscription_federation,
+  ouverte_a_tous: !!c.ouverte_a_tous, genre: c.genre || 'ouvert', categorie_max: c.categorie_max || '', categorie_min: c.categorie_min || '', points_max: c.points_max == null ? '' : String(c.points_max), inscription_federation: !!c.inscription_federation, inscription_athletes: c.inscription_athletes !== false,
   nb_simples: c.nb_simples == null ? '' : String(c.nb_simples), nb_doubles: c.nb_doubles == null ? '' : String(c.nb_doubles)
 });
 const norme = (f) => ({
@@ -120,7 +121,7 @@ const norme = (f) => ({
   date_limite_inscription: f.date_limite_inscription || null, ouverte_a_tous: !!f.ouverte_a_tous,
   // Envoyés seulement s'ils sont renseignés : le site reste utilisable avant le script 026.
   ...(f.genre !== 'ouvert' ? { genre: f.genre } : {}), ...(f.categorie_max ? { categorie_max: f.categorie_max } : {}), ...(f.categorie_min ? { categorie_min: f.categorie_min } : {}),
-  ...(/^\d+$/.test(String(f.points_max).trim()) ? { points_max: parseInt(f.points_max, 10) } : {}), ...(f.inscription_federation ? { inscription_federation: true } : {}),
+  ...(/^\d+$/.test(String(f.points_max).trim()) ? { points_max: parseInt(f.points_max, 10) } : {}), ...(f.inscription_federation ? { inscription_federation: true } : {}), ...(f.inscription_athletes ? {} : { inscription_athletes: false }),
   ...(f.type === 'equipe' && /^\d+$/.test(f.nb_simples) ? { nb_simples: parseInt(f.nb_simples, 10) } : {}),
   ...(f.type === 'equipe' && /^\d+$/.test(f.nb_doubles) ? { nb_doubles: parseInt(f.nb_doubles, 10) } : {})
 });
@@ -211,6 +212,10 @@ function Formulaire({ ctx, c }) {
       <div class="plein"><div class="case">
         <input id="p-fed" type="checkbox" disabled=${dis} checked=${f.inscription_federation} onChange=${(e) => maj({ inscription_federation: e.target.checked })} />
         <label for="p-fed">Inscriptions réservées à la fédération (ni les clubs ni les athlètes ne peuvent s'inscrire)</label>
+      </div></div>
+      <div class="plein"><div class="case">
+        <input id="p-ath" type="checkbox" disabled=${dis} checked=${f.inscription_athletes} onChange=${(e) => maj({ inscription_athletes: e.target.checked })} />
+        <label for="p-ath">Les athlètes peuvent s'inscrire eux-mêmes (décoché : seuls le cadre fédéral et les responsables de club inscrivent)</label>
       </div></div>
       <div class="plein"><div class="case">
         <input id="p-tous" type="checkbox" disabled=${dis} checked=${f.ouverte_a_tous} onChange=${(e) => maj({ ouverte_a_tous: e.target.checked })} />
