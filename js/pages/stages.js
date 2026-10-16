@@ -88,7 +88,7 @@ function Confirmation({ stages, r, f, onRetour }) {
     ${attente.length > 0 && html`<p class="avis"><strong>Liste d'attente :</strong> ${attente.map((l) => `${l.prenom} ${l.nom} (${l.stage})`).join(', ')}. Le stage est complet : la fédération te contactera si une place se libère. Rien à régler pour ces stages pour le moment.</p>`}
     ${deja.length > 0 && html`<p class="aide">Déjà inscrit(e) : ${deja.map((l) => `${l.prenom} ${l.nom} (${l.stage})`).join(', ')}.</p>`}
     ${confirmees.length > 0 && html`<p class="avis">Total à régler : <strong>${xpf(r.total_xpf)}</strong>, licence événementielle incluse.</p>`}
-    ${confirmees.length > 0 && r.mode_paiement === 'sur_place' && html`<p>Règlement <strong>sur place</strong> le premier jour. <strong>Merci de prévoir l'appoint</strong> : nous ne sommes pas sûrs d'avoir de la monnaie à rendre. Une facture acquittée sera remise une fois le paiement effectué.</p>`}
+    ${confirmees.length > 0 && r.mode_paiement === 'sur_place' && html`<p>Règlement <strong>sur place</strong> le premier jour, en espèces ou par chèque. En espèces, <strong>merci de prévoir l'appoint</strong> : nous ne sommes pas sûrs d'avoir de la monnaie à rendre. Une facture acquittée sera remise une fois le paiement effectué.</p>`}
     ${confirmees.length > 0 && r.mode_paiement === 'virement' && html`<div>
       <p>Règlement <strong>par virement</strong> de ${xpf(r.total_xpf)}.</p>
       ${paiement.length > 0 && html`<ul class="liste-simple">${paiement.map((l, k) => html`<li key=${k}>${l}</li>`)}</ul>`}
@@ -253,7 +253,7 @@ function Formulaire({ stages, preselection, onFait }) {
           <option value="virement">Par virement</option>
         </select>
       <//>
-      ${mode === 'sur_place' && html`<p class="avis">Paiement en espèces le premier jour : merci de prévoir <strong>l'appoint</strong>, nous ne sommes pas sûrs d'avoir de la monnaie à rendre.</p>`}
+      ${mode === 'sur_place' && html`<p class="avis">Paiement en espèces ou par chèque le premier jour. En espèces, merci de prévoir <strong>l'appoint</strong> : nous ne sommes pas sûrs d'avoir de la monnaie à rendre.</p>`}
       ${mode === 'virement' && html`<${CoordonneesVirement} objet=${'STAGE NOM Prénom (ex. STAGE DUPONT Marie)'} />`}
       <div style="position:absolute;left:-9999px" aria-hidden="true">
         <label for="a-site">Ne pas remplir</label>
