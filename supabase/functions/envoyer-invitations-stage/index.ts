@@ -5,6 +5,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const LIEN = 'https://app.fttt.pf/#/stages';
+const CONTACT = 'fttt.secretariat@gmail.com';
 const fmt = (iso: string) => new Date(iso + 'T12:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
@@ -15,41 +16,47 @@ Deno.serve(async () => {
 
   // Réserve les lignes à envoyer (une seule exécution peut les prendre)
   const { data: lignes, error } = await sb.from('invitations_stage').update({ statut: 'envoi' })
-    .eq('statut', 'a_envoyer').select('id, email, destinataire, stage_id, licencie_id');
+    .eq('statut', 'a_envoyer').select('id, email, destinataire, licencie_id');
   if (error) return new Response(JSON.stringify({ erreur: error.message }), { status: 500 });
   if (!lignes?.length) return new Response(JSON.stringify({ envoyes: 0 }));
 
-  const { data: stages } = await sb.from('stages').select('id, nom, date_debut, date_fin, lieu, tarif_licencie, tarif_non_licencie').in('id', [...new Set(lignes.map((l) => l.stage_id))]);
+  // Stages ouverts au moment de l'envoi : l'e-mail les annonce tous, le parent choisit sur la page des stages
+  const aujourdhui = new Date(Date.now() - 10 * 3600 * 1000).toISOString().slice(0, 10);
+  const { data: stages } = await sb.from('stages').select('nom, date_debut, date_fin, lieu, tarif_licencie, tarif_non_licencie')
+    .eq('statut', 'ouvert').gte('date_fin', aujourdhui).order('date_debut');
   const { data: jeunes } = await sb.from('licencies').select('id, prenom').in('id', lignes.map((l) => l.licencie_id));
-  const stage = new Map((stages ?? []).map((s) => [s.id, s]));
   const prenom = new Map((jeunes ?? []).map((j) => [j.id, j.prenom]));
 
-  // Un e-mail par adresse et par stage, avec le prénom de chaque jeune concerné
+  // Un e-mail par adresse, avec le prénom de chaque jeune concerné
   const groupes = new Map<string, typeof lignes>();
-  for (const l of lignes) { const k = l.email.toLowerCase() + '|' + l.stage_id; groupes.set(k, [...(groupes.get(k) ?? []), l]); }
+  for (const l of lignes) { const k = l.email.toLowerCase(); groupes.set(k, [...(groupes.get(k) ?? []), l]); }
 
   let envoyes = 0, echecs = 0;
   for (const g of groupes.values()) {
-    const s = stage.get(g[0].stage_id);
     const ids = g.map((l) => l.id);
-    if (!s) { await sb.from('invitations_stage').update({ statut: 'echec', erreur: 'Stage introuvable' }).in('id', ids); echecs += g.length; continue; }
+    if (!stages?.length) { await sb.from('invitations_stage').update({ statut: 'echec', erreur: 'Aucun stage ouvert' }).in('id', ids); echecs += g.length; continue; }
     const noms = [...new Set(g.map((l) => prenom.get(l.licencie_id)).filter(Boolean))] as string[];
     const liste = noms.length > 1 ? noms.slice(0, -1).join(', ') + ' et ' + noms[noms.length - 1] : noms[0] ?? 'votre enfant';
-    const dates = s.date_fin !== s.date_debut ? `du ${fmt(s.date_debut)} au ${fmt(s.date_fin)}` : `le ${fmt(s.date_debut)}`;
     const bonjour = g[0].destinataire ? `Bonjour ${esc(g[0].destinataire)},` : 'Bonjour,';
+    const lignesStages = stages.map((s) => {
+      const dates = s.date_fin !== s.date_debut ? `du ${fmt(s.date_debut)} au ${fmt(s.date_fin)}` : `le ${fmt(s.date_debut)}`;
+      return `<li><strong>${esc(s.nom)}</strong>, ${dates}${s.lieu ? ' (' + esc(s.lieu) + ')' : ''}</li>`;
+    }).join('');
+    const tl = stages[0].tarif_licencie, tn = stages[0].tarif_non_licencie;
     const html = `<p>${bonjour}</p>
-<p>Votre club vous invite à inscrire <strong>${esc(liste)}</strong> au stage <strong>${esc(s.nom)}</strong> de la Fédération Tahitienne de Tennis de Table, ${dates}${s.lieu ? ' (' + esc(s.lieu) + ')' : ''}.</p>
+<p>Votre club vous invite à inscrire <strong>${esc(liste)}</strong> à un stage de la Fédération Tahitienne de Tennis de Table. Stage${stages.length > 1 ? 's' : ''} ouvert${stages.length > 1 ? 's' : ''} aux inscriptions :</p>
+<ul>${lignesStages}</ul>
 <p>L'inscription se fait en quelques minutes, sans compte : <a href="${LIEN}">${LIEN}</a><br>
-Il suffit de saisir vos coordonnées et celles de votre enfant, puis de cocher le stage. Une fiche d'inscription déjà remplie vous sera proposée : il ne reste qu'à la signer.</p>
-<p>Tarif : ${s.tarif_licencie.toLocaleString('fr-FR')} XPF pour un licencié, ${s.tarif_non_licencie.toLocaleString('fr-FR')} XPF sinon (licence événementielle incluse). Un certificat médical d'aptitude est à remettre le premier jour, sauf pour les licenciés.</p>
-<p>Cordialement,<br>Fédération Tahitienne de Tennis de Table<br>contact@fttt.pf</p>`;
+Vous saisissez vos coordonnées et celles de votre enfant, puis vous cochez le ou les stages souhaités (vous pouvez en choisir plusieurs et inscrire plusieurs enfants). Une fiche d'inscription déjà remplie vous sera proposée : il ne reste qu'à la signer.</p>
+<p>Tarif : ${tl.toLocaleString('fr-FR')} XPF pour un licencié, ${tn.toLocaleString('fr-FR')} XPF sinon (licence événementielle incluse). Un certificat médical d'aptitude est à remettre le premier jour, sauf pour les licenciés.</p>
+<p>Cordialement,<br>Fédération Tahitienne de Tennis de Table<br>${CONTACT}</p>`;
     try {
       const rep = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': cle, 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'FTTT', email: 'no-reply@fttt.pf' }, replyTo: { email: 'contact@fttt.pf', name: 'FTTT' },
-          to: [{ email: g[0].email }], subject: `Inscription au ${s.nom} (FTTT)`, htmlContent: html
+          sender: { name: 'FTTT', email: 'no-reply@fttt.pf' }, replyTo: { email: CONTACT, name: 'FTTT' },
+          to: [{ email: g[0].email }], subject: 'Inscription aux stages de la FTTT', htmlContent: html
         })
       });
       if (!rep.ok) throw new Error(`Brevo ${rep.status} ${(await rep.text()).slice(0, 200)}`);

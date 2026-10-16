@@ -94,8 +94,8 @@ export const api = {
     p_autorisation_parentale: !!a.autorisationParentale, p_autorisation_photo: !!a.autorisationPhoto,
     p_mode_paiement: a.modePaiement, p_site: a.site || null
   }),
-  invitablesStage: (stage, club) => appeler('invitables_stage', { p_stage: stage, p_club: club }),
-  inviterStage: (stage, club, licencies, renvoyer = false) => appeler('inviter_stage', { p_stage: stage, p_club: club, p_licencies: licencies, p_renvoyer: renvoyer }),
+  invitablesStage: (club) => appeler('invitables_stage', { p_club: club }),
+  inviterStage: (club, licencies, renvoyer = false) => appeler('inviter_stage', { p_club: club, p_licencies: licencies, p_renvoyer: renvoyer }),
   // Déclenche l'envoi des e-mails en file (la fonction ne traite que des lignes déjà autorisées par la base)
   envoyerInvitationsStage: async () => { const { data, error } = await sb.functions.invoke('rapid-processor', { body: {} }); if (error) throw error; return data; },
   stagesCadre: async () => {
