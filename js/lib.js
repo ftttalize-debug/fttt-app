@@ -52,8 +52,15 @@ export function ageAu1erJanvier(naissance, ref = new Date()) {
   return ref.getFullYear() - b.getFullYear() - (apresLe1erJanvier ? 1 : 0);
 }
 
+/** Âge de catégorie : année de la compétition (ou du jour) moins année de naissance, quel que soit le mois (règle FTTT, script 035). */
+export function ageCategorie(naissance, ref = new Date()) {
+  const b = parseDate(naissance);
+  if (!b) return null;
+  return ref.getFullYear() - b.getFullYear();
+}
+
 export function categorie(naissance, ref = new Date()) {
-  const a = ageAu1erJanvier(naissance, ref);
+  const a = ageCategorie(naissance, ref);
   if (a === null) return '—';
   if (a <= 9) return 'Poussin';
   if (a <= 11) return 'Benjamin';

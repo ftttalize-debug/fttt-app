@@ -12,7 +12,7 @@ export const TYPES_COMP = { simple: 'Simple', double: 'Double', equipe: 'Par éq
 const STATUTS = { brouillon: 'Brouillon', ouverte: 'Inscriptions ouvertes', cloturee: 'Inscriptions closes', terminee: 'Terminée' };
 const GENRE = { brouillon: 'neutre', ouverte: 'actif', cloturee: 'alerte', terminee: 'archive' };
 export const GENRES = { ouvert: 'Mixte (tous)', dames: 'Dames', messieurs: 'Messieurs', mixte: 'Mixte (1 fille + 1 garçon)', uni: 'Uni (2 filles ou 2 garçons)' };
-const CATEGORIES_MAX = { '': 'Aucune limite', VET: 'Vétérans (41 ans et plus)', U11: 'U11 et moins', U13: 'U13 et moins', U15: 'U15 et moins', U19: 'U19 et moins' };
+const CATEGORIES_MAX = { '': 'Aucune limite', VET: 'Vétérans (41 ans et plus)', U11: 'U11 et moins', U12: 'U12 et moins', U13: 'U13 et moins', U15: 'U15 et moins', U19: 'U19 et moins' };
 const COEFS = ['0.50', '0.75', '1.00', '1.25', '1.50'];
 export const fmtXpf = (n) => `${Number(n || 0).toLocaleString('fr-FR').replace(/ /g, ' ')} F`;
 const dates = (c) => (c.date_debut === c.date_fin ? fmtDate(c.date_debut) : `${fmtDate(c.date_debut)} – ${fmtDate(c.date_fin)}`);
@@ -87,6 +87,8 @@ export function PageCompetitions({ ctx, route }) {
             <${Pastille}>${TYPES_COMP[c.type]}<//>
             ${c.categorie_max && html`<${Pastille}>${c.categorie_max}<//>`}
             ${c.categorie_min && html`<${Pastille}>Vétérans<//>`}
+            ${c.points_max != null && html`<${Pastille}>≤ ${c.points_max} pts<//>`}
+            ${c.inscription_federation && html`<${Pastille}>Inscription fédération<//>`}
             ${c.genre && c.genre !== 'ouvert' && html`<${Pastille}>${GENRES[c.genre].split(' (')[0]}<//>`}
             <${Pastille}>Coef. ${Number(c.coefficient).toLocaleString('fr-FR')}<//>
           </span>
@@ -98,12 +100,12 @@ export function PageCompetitions({ ctx, route }) {
 
 const vide = (ctx) => ({
   nom: '', saison_id: ctx.saison?.id || '', lieu: '', date_debut: '', date_fin: '', type: 'simple',
-  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: '', categorie_min: '', nb_simples: '', nb_doubles: ''
+  coefficient: '1.00', montant_xpf: '0', date_limite_inscription: '', ouverte_a_tous: false, genre: 'ouvert', categorie_max: '', categorie_min: '', points_max: '', inscription_federation: false, nb_simples: '', nb_doubles: ''
 });
 const depuis = (c) => ({
   nom: c.nom, saison_id: c.saison_id, lieu: c.lieu || '', date_debut: c.date_debut, date_fin: c.date_fin, type: c.type,
   coefficient: Number(c.coefficient).toFixed(2), montant_xpf: String(c.montant_xpf), date_limite_inscription: c.date_limite_inscription || '',
-  ouverte_a_tous: !!c.ouverte_a_tous, genre: c.genre || 'ouvert', categorie_max: c.categorie_max || '', categorie_min: c.categorie_min || '',
+  ouverte_a_tous: !!c.ouverte_a_tous, genre: c.genre || 'ouvert', categorie_max: c.categorie_max || '', categorie_min: c.categorie_min || '', points_max: c.points_max == null ? '' : String(c.points_max), inscription_federation: !!c.inscription_federation,
   nb_simples: c.nb_simples == null ? '' : String(c.nb_simples), nb_doubles: c.nb_doubles == null ? '' : String(c.nb_doubles)
 });
 const norme = (f) => ({
@@ -112,6 +114,7 @@ const norme = (f) => ({
   date_limite_inscription: f.date_limite_inscription || null, ouverte_a_tous: !!f.ouverte_a_tous,
   // Envoyés seulement s'ils sont renseignés : le site reste utilisable avant le script 026.
   ...(f.genre !== 'ouvert' ? { genre: f.genre } : {}), ...(f.categorie_max ? { categorie_max: f.categorie_max } : {}), ...(f.categorie_min ? { categorie_min: f.categorie_min } : {}),
+  ...(/^\d+$/.test(String(f.points_max).trim()) ? { points_max: parseInt(f.points_max, 10) } : {}), ...(f.inscription_federation ? { inscription_federation: true } : {}),
   ...(f.type === 'equipe' && /^\d+$/.test(f.nb_simples) ? { nb_simples: parseInt(f.nb_simples, 10) } : {}),
   ...(f.type === 'equipe' && /^\d+$/.test(f.nb_doubles) ? { nb_doubles: parseInt(f.nb_doubles, 10) } : {})
 });
@@ -123,6 +126,7 @@ function valider(f) {
   if (f.date_fin && f.date_debut && f.date_fin < f.date_debut) e.date_fin = 'La fin ne peut pas précéder le début.';
   if (f.date_limite_inscription && f.date_debut && f.date_limite_inscription > f.date_debut) e.limite = 'La date limite doit précéder le début.';
   if (!/^\d+$/.test(f.montant_xpf.trim())) e.montant = 'Nombre entier, 0 si gratuit.';
+  if (String(f.points_max).trim() && !/^\d+$/.test(String(f.points_max).trim())) e.points_max = 'Nombre entier, vide si aucune limite.';
   return e;
 }
 
@@ -192,10 +196,16 @@ function Formulaire({ ctx, c }) {
         <select id="p-coef" disabled=${dis} value=${f.coefficient} onChange=${(e) => maj({ coefficient: e.target.value })}>
           ${COEFS.map((k) => html`<option key=${k} value=${k}>${Number(k).toLocaleString('fr-FR')}</option>`)}
         </select><//>
+      <${Champ} id="p-pmax" libelle="Points maximum (classement)" aide="Vide = aucune limite. Ex. 599 : seuls les joueurs de 599 points et moins peuvent s'inscrire." erreur=${erreurs.points_max}>
+        <input id="p-pmax" type="text" inputmode="numeric" disabled=${dis} value=${f.points_max} onInput=${(e) => maj({ points_max: e.target.value })} /><//>
       <${Champ} id="p-montant" libelle=${f.type === 'equipe' ? 'Montant par équipe (F CFP)' : 'Montant par participant (F CFP)'} erreur=${erreurs.montant}>
         <input id="p-montant" type="text" inputmode="numeric" disabled=${dis} value=${f.montant_xpf} onInput=${(e) => maj({ montant_xpf: e.target.value })} /><//>
       <${Champ} id="p-limite" libelle="Date limite d'inscription" aide="Après cette date, les clubs ne peuvent plus inscrire ni modifier." erreur=${erreurs.limite}>
         <input id="p-limite" type="date" disabled=${dis} value=${f.date_limite_inscription} onInput=${(e) => maj({ date_limite_inscription: e.target.value })} /><//>
+      <div class="plein"><div class="case">
+        <input id="p-fed" type="checkbox" disabled=${dis} checked=${f.inscription_federation} onChange=${(e) => maj({ inscription_federation: e.target.checked })} />
+        <label for="p-fed">Inscriptions réservées à la fédération (ni les clubs ni les athlètes ne peuvent s'inscrire)</label>
+      </div></div>
       <div class="plein"><div class="case">
         <input id="p-tous" type="checkbox" disabled=${dis} checked=${f.ouverte_a_tous} onChange=${(e) => maj({ ouverte_a_tous: e.target.checked })} />
         <label for="p-tous">Ouverte à tous (toutes les licences peuvent s'inscrire, y compris loisir et événementielle)</label>
@@ -271,7 +281,7 @@ function Etat({ ctx, c }) {
   </section>`;
 }
 
-const CATS_TABLEAUX = [['', 'Open'], ['VET', 'Vétérans'], ['U19', 'U19'], ['U15', 'U15'], ['U13', 'U13'], ['U11', 'U11']];
+const CATS_TABLEAUX = [['', 'Open'], ['VET', 'Vétérans'], ['U19', 'U19'], ['U15', 'U15'], ['U13', 'U13'], ['U12', 'U12'], ['U11', 'U11']];
 const GENRES_SIMPLE = [['messieurs', 'Messieurs'], ['dames', 'Dames'], ['ouvert', 'Mixte']];
 const DOUBLES = [['messieurs', 'Double messieurs'], ['dames', 'Double dames'], ['mixte', 'Double mixte'], ['uni', 'Double uni'], ['vet', 'Double vétérans']];
 
