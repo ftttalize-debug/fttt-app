@@ -35,7 +35,7 @@ const CHAMPS = {
   club_id: 'Club', statut: 'Statut', points: 'Points', handicap: 'Handicap', user_id: 'Compte', role: 'Rôle',
   type: 'Type', certificat_type: 'Type de certificat', certificat_date: 'Date du certificat', certificat_fourni: 'Certificat fourni',
   questionnaire_fourni: 'Questionnaire', photo_fournie: 'Photo', montant_xpf: 'Montant (XPF)', coefficient: 'Coefficient',
-  date_debut: 'Début', date_fin: 'Fin', libelle: 'Libellé', actif: 'Actif', representant_legal_id: 'Représentant légal (lien)', representant_nom: 'Représentant légal',
+  date_debut: 'Début', date_fin: 'Fin', libelle: 'Libellé', actif: 'Actif', representant_legal_id: 'Représentant légal (lien)', representant_nom: 'Représentant légal', representant_telephone: 'Téléphone du représentant', representant_email: 'E-mail du représentant',
   nom_competition: 'Nom', tour: 'Tour', sets_gagnes: 'Sets gagnés', score_a: 'Score A', score_b: 'Score B',
   points_finaux: 'Points', applique: 'Appliqué', numero: 'Numéro', adresse: 'Adresse', niveau: 'Niveau'
 };
