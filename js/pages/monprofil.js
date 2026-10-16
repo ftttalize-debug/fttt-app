@@ -1,7 +1,7 @@
 // « Mon profil » : fiche de licence, résultats et inscriptions de l'athlète, sans compte (prénom + nom + date de naissance).
 import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
-import { fmtDate, fmtPts, fmtVariation, msgErreur } from '../lib.js';
+import { fmtDate, fmtPts, fmtVariation, msgErreur, lien } from '../lib.js';
 import { Champ, Pastille, Chargement, Pliable } from '../ui.js';
 import { OngletsPublics } from './public.js';
 import { ListeMatchs, ResultatsParCompetition, bilanHisto } from './joueur.js';
@@ -86,6 +86,43 @@ function Inscriptions({ liste, resultats }) {
   </div>`;
 }
 
+/** Fiche, résultats et inscriptions d'un athlète (profil public sans compte, ou « Mon profil » d'un compte connecté). */
+function VueProfil({ profil, onQuitter, avant = null }) {
+  const [erreur, setErreur] = useState('');
+  const bilan = useMemo(() => bilanHisto(profil?.resultats || []), [profil]);
+  const enCours = !!profil?.licence?.en_cours;
+  async function attestation() {
+    try { await telechargerAttestation(profil); } catch (err) { setErreur(msgErreur(err)); }
+  }
+    return html`<div>
+      ${avant}
+      <section class="carte" id="fiche-licence" aria-label="Fiche de licence">
+        <div class="match-tete"><h2>${profil.prenom} ${profil.nom}</h2>
+          <${Pastille} genre=${enCours ? 'actif' : 'archive'}>${enCours ? 'Licence active ' + profil.licence.saison : 'Licence non active'}<//></div>
+        <dl class="fiche-liste">
+          <div><dt>N° de licence</dt><dd id="pf-numero">${profil.numero}</dd></div>
+          <div><dt>Date de naissance</dt><dd>${fmtDate(profil.naissance)}</dd></div>
+          <div><dt>Club</dt><dd>${profil.club || 'Sans club'}</dd></div>
+          <div><dt>Catégorie</dt><dd>${profil.categorie}</dd></div>
+          ${profil.licence && html`<div><dt>Licence</dt><dd>${LICENCES[profil.licence.type] || profil.licence.type} · ${profil.licence.saison}</dd></div>`}
+          <div><dt>Classement</dt><dd>${profil.rang ? profil.rang + 'e · ' : ''}${fmtPts(profil.points)} points</dd></div>
+        </dl>
+        ${erreur && html`<p class="erreur" role="alert">${erreur}</p>`}
+        <div class="etiquettes">
+          ${enCours && html`<button class="btn btn-primaire" type="button" id="btn-attestation" onClick=${attestation}>Télécharger mon attestation (PDF)</button>`}
+          <a class="btn btn-secondaire" href=${'#/sinscrire'}>M'inscrire à une compétition</a>
+          ${onQuitter && html`<button class="btn btn-secondaire" type="button" onClick=${onQuitter}>Ce n'est pas moi / Me déconnecter</button>`}
+        </div>
+        ${!enCours && html`<p class="aide">L'attestation n'est disponible que pour une licence active sur la saison en cours.</p>`}
+      </section>
+      <h2>Mes résultats</h2>
+      ${profil.resultats.length > 0 && html`<p class="aide">${bilan.v} victoire(s) · ${bilan.d} défaite(s) · ${fmtVariation(bilan.points)} pts au total.</p>`}
+      <${ResultatsParCompetition} histo=${profil.resultats} />
+      <h2>Mes inscriptions</h2>
+      <${Inscriptions} liste=${profil.inscriptions} resultats=${profil.resultats} />
+    </div>`;
+}
+
 export function PageMonProfil() {
   const souvenir = useMemo(lireIdentite, []);
   const [prenom, setPrenom] = useState('');
@@ -116,12 +153,6 @@ export function PageMonProfil() {
     charger(identifiant, naissance, retenir);
   }
   function quitter() { effacerIdentite(); setProfil(null); setPrenom(''); setNom(''); setNumero(''); setNaissance(''); setErreur(''); }
-  async function attestation() {
-    try { await telechargerAttestation(profil); } catch (err) { setErreur(msgErreur(err)); }
-  }
-
-  const bilan = useMemo(() => bilanHisto(profil?.resultats || []), [profil]);
-  const enCours = !!profil?.licence?.en_cours;
 
   return html`<div class="page">
     <div class="page-tete"><div><h1>Mon profil</h1><p>Ma licence, mes résultats et mes inscriptions</p></div></div>
@@ -138,31 +169,42 @@ export function PageMonProfil() {
       ${erreur && html`<p class="erreur" role="alert">${erreur}</p>`}
       <button class="btn btn-primaire" type="submit" disabled=${occupe}>${occupe ? 'Vérification…' : 'Voir mon profil'}</button>
     </form>`}
-    ${profil && html`<div>
-      <section class="carte" id="fiche-licence" aria-label="Fiche de licence">
-        <div class="match-tete"><h2>${profil.prenom} ${profil.nom}</h2>
-          <${Pastille} genre=${enCours ? 'actif' : 'archive'}>${enCours ? 'Licence active ' + profil.licence.saison : 'Licence non active'}<//></div>
-        <dl class="fiche-liste">
-          <div><dt>N° de licence</dt><dd id="pf-numero">${profil.numero}</dd></div>
-          <div><dt>Date de naissance</dt><dd>${fmtDate(profil.naissance)}</dd></div>
-          <div><dt>Club</dt><dd>${profil.club || 'Sans club'}</dd></div>
-          <div><dt>Catégorie</dt><dd>${profil.categorie}</dd></div>
-          ${profil.licence && html`<div><dt>Licence</dt><dd>${LICENCES[profil.licence.type] || profil.licence.type} · ${profil.licence.saison}</dd></div>`}
-          <div><dt>Classement</dt><dd>${profil.rang ? profil.rang + 'e · ' : ''}${fmtPts(profil.points)} points</dd></div>
-        </dl>
-        ${erreur && html`<p class="erreur" role="alert">${erreur}</p>`}
-        <div class="etiquettes">
-          ${enCours && html`<button class="btn btn-primaire" type="button" id="btn-attestation" onClick=${attestation}>Télécharger mon attestation (PDF)</button>`}
-          <a class="btn btn-secondaire" href=${'#/sinscrire'}>M'inscrire à une compétition</a>
-          <button class="btn btn-secondaire" type="button" onClick=${quitter}>Ce n'est pas moi / Me déconnecter</button>
-        </div>
-        ${!enCours && html`<p class="aide">L'attestation n'est disponible que pour une licence active sur la saison en cours.</p>`}
-      </section>
-      <h2>Mes résultats</h2>
-      ${profil.resultats.length > 0 && html`<p class="aide">${bilan.v} victoire(s) · ${bilan.d} défaite(s) · ${fmtVariation(bilan.points)} pts au total.</p>`}
-      <${ResultatsParCompetition} histo=${profil.resultats} />
-      <h2>Mes inscriptions</h2>
-      <${Inscriptions} liste=${profil.inscriptions} resultats=${profil.resultats} />
-    </div>`}
+    ${profil && html`<${VueProfil} profil=${profil} onQuitter=${quitter} />`}
+  </div>`;
+}
+
+const LIBELLE_ROLE = { cadre_federal: 'Cadre fédéral', responsable_club: 'Responsable de club', juge_arbitre: 'Juge-arbitre' };
+
+/** « Mon profil » d'un compte connecté : rôle(s), fiche sportive, résultats et inscriptions. */
+export function PageMonEspace({ ctx }) {
+  const moi = ctx.moi;
+  const [profil, setProfil] = useState(null);
+  const [erreur, setErreur] = useState('');
+  useEffect(() => {
+    setProfil(null); setErreur('');
+    api.athleteProfil(moi.numero_licence, moi.date_naissance)
+      .then((r) => { if (r?.erreur) throw new Error(r.erreur); setProfil(r); })
+      .catch((e) => setErreur(msgErreur(e)));
+  }, [moi.id]);
+  const clubsResp = ctx.clubsResponsable.map((id) => ctx.clubParId.get(id)).filter(Boolean);
+  const mesComps = ctx.juges.filter((j) => j.licencie_id === moi.id).map((j) => ctx.competitionParId.get(j.competition_id)).filter(Boolean)
+    .sort((a, b) => String(b.date_debut).localeCompare(String(a.date_debut)));
+  const roles = html`<section class="carte" aria-label="Mes rôles">
+    <h2>Mes rôles</h2>
+    <div class="etiquettes">
+      ${ctx.estCadre && html`<${Pastille} genre="actif">${LIBELLE_ROLE.cadre_federal}<//>`}
+      ${clubsResp.map((c) => html`<${Pastille} key=${c.id} genre="actif">Responsable de club · ${c.nom}<//>`)}
+      ${ctx.estJuge && html`<${Pastille} genre="actif">${LIBELLE_ROLE.juge_arbitre}<//>`}
+      ${!ctx.estCadre && !ctx.estResponsable && !ctx.estJuge && html`<${Pastille}>Licencié<//>`}
+    </div>
+    ${ctx.estCadre && html`<p class="aide">Tu gères les licenciés, les clubs, les compétitions et le classement de la fédération.</p>`}
+    ${clubsResp.length > 0 && html`<p class="aide">Tu inscris les athlètes de ${clubsResp.map((c) => c.nom).join(', ')} aux compétitions ouvertes et suis leurs factures. ${clubsResp.map((c) => html`<a key=${c.id} href=${lien(['clubs', c.id])}>Voir ${c.nom}</a> `)}</p>`}
+    ${mesComps.length > 0 && html`<div><p class="aide">Compétitions dont tu es juge-arbitre :</p>
+      <ul class="liste-simple">${mesComps.slice(0, 8).map((c) => html`<li key=${c.id}><a href=${lien(['competitions', c.id])}>${c.nom}</a> · ${fmtDate(c.date_debut)}</li>`)}</ul></div>`}
+  </section>`;
+  if (erreur) return html`<div class="page"><p class="erreur" role="alert">${erreur}</p></div>`;
+  return html`<div class="page">
+    <div class="page-tete"><div><h1>Mon profil</h1><p>Mon rôle, mon classement et mes résultats</p></div></div>
+    ${profil ? html`<${VueProfil} profil=${profil} avant=${roles} />` : html`<div>${roles}<${Chargement} /></div>`}
   </div>`;
 }

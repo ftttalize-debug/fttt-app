@@ -19,7 +19,7 @@ import { PageStages } from './pages/stages.js';
 import { PageInviterStage } from './pages/inviter_stage.js';
 import { PageGestionStages } from './pages/gestion_stages.js';
 import { PageSinscrire } from './pages/sinscrire.js';
-import { PageMonProfil } from './pages/monprofil.js';
+import { PageMonProfil, PageMonEspace } from './pages/monprofil.js';
 import { lireIdentite } from './identite.js';
 import { PageJoueur } from './pages/joueur.js';
 import { PagePoints } from './pages/points.js';
@@ -62,6 +62,7 @@ function Cadre({ ctx, route, children }) {
         <img class="menu-logo" src="assets/logo-complet.png" alt="Fédération Tahitienne de Tennis de Table" />
         <nav class="nav" aria-label="Navigation principale">
           ${lienNav('', [], 'Accueil', 'accueil')}
+          ${lienNav('moi', ['moi'], 'Mon profil', 'profil')}
           ${gestion
             ? html`${lienNav('licencies', ['licencies'], 'Licenciés', 'licencies')}${lienNav('clubs', ['clubs'], 'Clubs', 'clubs')}`
             : !ctx.estJugeSeul && lienNav('profil', ['profil'], 'Ma fiche', 'profil')}
@@ -103,7 +104,8 @@ function Pages({ ctx, route }) {
   const gestion = ctx.estCadre || ctx.estResponsable;
   if (!p) return html`<${PageAccueil} ctx=${ctx} />`;
   // Le juge-arbitre n'a accès qu'aux compétitions (pour saisir les scores), au calendrier et au classement
-  if (ctx.estJugeSeul && !['competitions', 'classement', 'resultats', 'calendrier', 'saison', 'connexion'].includes(p)) return html`<${PageAccueil} ctx=${ctx} />`;
+  if (ctx.estJugeSeul && !['competitions', 'classement', 'resultats', 'calendrier', 'saison', 'connexion', 'moi'].includes(p)) return html`<${PageAccueil} ctx=${ctx} />`;
+  if (p === 'moi') return html`<${PageMonEspace} ctx=${ctx} />`;
   if (p === 'profil') return html`<${PageLicencie} ctx=${ctx} id=${ctx.moi.id} />`;
   if (p === 'licencies') {
     if (id === 'nouveau') return html`<${PageNouveauLicencie} ctx=${ctx} />`;
