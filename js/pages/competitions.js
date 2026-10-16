@@ -64,7 +64,13 @@ export function PageCompetitions({ ctx, route }) {
   const [reprise, setReprise] = useState(false);
   const { competitions, estCadre } = ctx;
   const statut = route.query.statut || 'toutes';
-  const liste = competitions.filter((c) => statut === 'toutes' || c.statut === statut);
+  // À venir (ou en cours) d'abord, de la plus proche à la plus lointaine ; puis les passées, de la plus récente à la plus ancienne
+  const auj = aujourdhuiISO();
+  const filtrees = competitions.filter((c) => statut === 'toutes' || c.statut === statut);
+  const liste = [
+    ...filtrees.filter((c) => c.date_fin >= auj).sort((x, y) => String(x.date_debut).localeCompare(String(y.date_debut))),
+    ...filtrees.filter((c) => c.date_fin < auj).sort((x, y) => String(y.date_debut).localeCompare(String(x.date_debut)))
+  ];
   const puces = [['toutes', 'Toutes'], ['ouverte', 'Ouvertes'], ['cloturee', 'Closes'], ['terminee', 'Terminées']];
   if (estCadre) puces.splice(1, 0, ['brouillon', 'Brouillons']);
   return html`<div class="page">
