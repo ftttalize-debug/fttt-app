@@ -35,7 +35,7 @@ export function ListeMatchs({ histo }) {
           <div class="match-score"><span>contre ${(h.liste || []).map((a, i) => html`${i > 0 ? ' / ' : ''}${a.id ? html`<a class="lien-joueur" href=${lien(['joueur', a.id])}>${a.nom}</a>` : a.nom}`)}</span>
             <strong>${h.sets_pour} - ${h.sets_contre}</strong>
             <span class=${h.points === null ? '' : h.points >= 0 ? 'gain' : 'perte'}>${h.points === null ? '' : fmtVariation(h.points) + ' pts'}</span></div>
-          <small>${h.manches}</small></li>`;
+          <small>${h.manches || 'Forfait'}</small></li>`;
       })}</ul></section>`)}
   </div>`;
 }

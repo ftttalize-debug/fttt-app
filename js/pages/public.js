@@ -182,7 +182,7 @@ function ResultatsEquipes({ competition }) {
               <span class=${m.sets_a > m.sets_b ? 'gagnant' : ''}><${Noms} r=${{ liste: m.a }} /></span>
               <strong>${m.sets_a} - ${m.sets_b}</strong>
               <span class=${m.sets_b > m.sets_a ? 'gagnant' : ''}><${Noms} r=${{ liste: m.b }} /></span></div>
-            <small>${m.manches}</small></li>`)}</ul></details>`}
+            <small>${m.manches || 'Forfait'}</small></li>`)}</ul></details>`}
       </li>`)}</ul></section>`)}
   </div>`;
 }
@@ -229,7 +229,7 @@ function ResultatsCompetition({ initial }) {
           <span class=${x.A.sets_gagnes > x.B.sets_gagnes ? 'gagnant' : ''}><${Noms} r=${x.A} /><${PointsCote} r=${x.A} /></span>
           <strong>${x.A.sets_gagnes} - ${x.B.sets_gagnes}</strong>
           <span class=${x.B.sets_gagnes > x.A.sets_gagnes ? 'gagnant' : ''}><${Noms} r=${x.B} /><${PointsCote} r=${x.B} /></span></div>
-        <small>${x.manches}</small></li>`)}
+        <small>${x.manches || 'Forfait'}</small></li>`)}
     </ul>`}
   </div>`;
 }

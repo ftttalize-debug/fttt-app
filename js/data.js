@@ -162,6 +162,11 @@ export const api = {
       p_rencontre: a.rencontre, p_type: a.type, p_sets_gagnants: a.setsGagnants,
       p_cote_a: a.coteA, p_cote_b: a.coteB, p_manches: a.manches, p_match: a.match || null
     }),
+  saisirForfaitRencontre: (a) =>
+    appeler('saisir_forfait_rencontre', {
+      p_rencontre: a.rencontre, p_type: a.type, p_cote_a: a.coteA, p_cote_b: a.coteB,
+      p_cote_forfait: a.coteForfait, p_match: a.match || null
+    }),
   supprimerMatch: (id) => appeler('supprimer_match', { p_match: id }),
   rejeterMatch: (id) => appeler('rejeter_match', { p_match: id }),
   validerMatchs: (competition) => appeler('valider_matchs', { p_competition: competition }),

@@ -38,6 +38,7 @@ export function DialogueMatch({ ctx, c, match, rencontre, onFermer }) {
   const [A, setA] = useState(match ? match.A.map((p) => p.licencie_id) : []);
   const [B, setB] = useState(match ? match.B.map((p) => p.licencie_id) : []);
   const [manches, setManches] = useState(match ? match.manches.map((x) => [String(x.score_a), String(x.score_b)]) : [['', ''], ['', ''], ['', '']]);
+  const [forfait, setForfait] = useState(match?.forfait_cote || '');
   const [occupe, setOccupe] = useState(false);
 
   const joueurs = useMemo(() => {
@@ -54,7 +55,7 @@ export function DialogueMatch({ ctx, c, match, rencontre, onFermer }) {
   const pris = [...A, ...B];
   const complet = A.length === nb && B.length === nb && A.every(Boolean) && B.every(Boolean);
   const doublon = new Set(pris.filter(Boolean)).size !== pris.filter(Boolean).length;
-  const valide = complet && !doublon && rempli.length > 0 && !analyse.erreur && analyse.enCours === false;
+  const valide = complet && !doublon && (forfait ? true : rempli.length > 0 && !analyse.erreur && analyse.enCours === false);
 
   const place = (cotes, setCotes, i) => (id) => setCotes((x) => { const y = x.slice(); y[i] = id || undefined; return y; });
   const majManche = (i, k, v) => setManches((ms) => ms.map((m, j) => (j === i ? (k === 0 ? [v, m[1]] : [m[0], v]) : m)));
@@ -65,7 +66,9 @@ export function DialogueMatch({ ctx, c, match, rencontre, onFermer }) {
     setOccupe(true);
     try {
       const manchesNum = rempli.map(([a, b]) => [Number(a), Number(b)]);
-      if (rencontre) {
+      if (rencontre && forfait) {
+        await api.saisirForfaitRencontre({ rencontre: rencontre.id, type, coteA: A, coteB: B, coteForfait: forfait, match: match?.id });
+      } else if (rencontre) {
         await api.saisirMatchRencontre({ rencontre: rencontre.id, type, setsGagnants: n, coteA: A, coteB: B, manches: manchesNum, match: match?.id });
       } else {
         await api.saisirMatch({ competition: c.id, tour, type, setsGagnants: n, coteA: A, coteB: B, manches: manchesNum, match: match?.id });
@@ -100,7 +103,13 @@ export function DialogueMatch({ ctx, c, match, rencontre, onFermer }) {
       </div></div>
     ${champsJoueurs(rencontre ? (nb > 1 ? 'Paire ' : 'Joueur ') + rencontre.nomA : (nb > 1 ? 'Paire A' : 'Joueur A'), A, setA, 'a', rencontre?.listeA)}
     ${champsJoueurs(rencontre ? (nb > 1 ? 'Paire ' : 'Joueur ') + rencontre.nomB : (nb > 1 ? 'Paire B' : 'Joueur B'), B, setB, 'b', rencontre?.listeB)}
-    <div class="champ"><span class="etiquette">Score de chaque manche</span>
+    ${rencontre && html`<div class="champ"><span class="etiquette">Forfait</span>
+      <div class="puces" role="group" aria-label="Forfait">
+        ${[['', 'Match joué'], ['A', `Forfait de ${rencontre.nomA}`], ['B', `Forfait de ${rencontre.nomB}`]].map(([v, t]) => html`<button key=${v || 'non'} type="button" class="puce" aria-pressed=${forfait === v}
+          onClick=${() => setForfait(v)}>${t}</button>`)}
+      </div>
+      ${forfait && html`<p class="avis">Forfait : victoire 3-0 de l'adversaire, aucun point gagné ni perdu. Le match compte dans le résultat de la rencontre.</p>`}</div>`}
+    ${!forfait && html`<div class="champ"><span class="etiquette">Score de chaque manche</span>
       <ul class="manches-saisie">
         ${manches.map((m, i) => html`<li key=${i}><span>Manche ${i + 1}</span>
           <input type="text" inputmode="numeric" aria-label=${`Manche ${i + 1}, score A`} value=${m[0]} onInput=${(e) => majManche(i, 0, e.target.value.replace(/\D/g, ''))} />
@@ -108,8 +117,9 @@ export function DialogueMatch({ ctx, c, match, rencontre, onFermer }) {
           <input type="text" inputmode="numeric" aria-label=${`Manche ${i + 1}, score B`} value=${m[1]} onInput=${(e) => majManche(i, 1, e.target.value.replace(/\D/g, ''))} /></li>`)}
       </ul>
       ${manches.length < 2 * n - 1 && html`<button class="btn btn-lien" type="button" onClick=${ajouterManche}>+ Ajouter une manche</button>`}
-    </div>
-    ${analyse.erreur ? html`<p class="erreur" role="alert">${analyse.erreur}</p>`
+    </div>`}
+    ${forfait ? (doublon ? html`<p class="erreur" role="alert">Un joueur apparaît deux fois.</p>` : null)
+      : analyse.erreur ? html`<p class="erreur" role="alert">${analyse.erreur}</p>`
       : doublon ? html`<p class="erreur" role="alert">Un joueur apparaît deux fois.</p>`
       : html`<p class="avis">Score en manches : <strong>${analyse.sa} - ${analyse.sb}</strong>${analyse.enCours === false ? ` · victoire de ${analyse.sa > analyse.sb ? 'A' : 'B'}` : rempli.length ? ' · match en cours : continue la saisie' : ''}</p>`}
     <div class="actions">
@@ -138,7 +148,7 @@ export function LigneMatch({ ctx, c, m, peutSaisir, onEdit }) {
       <strong>${m.setsA} - ${m.setsB}</strong>
       <span class=${!gagnantA ? 'gagnant' : ''}>${cote(ctx, m.B)}</span>
     </div>
-    <small>${m.manches.map((x) => `${x.score_a}-${x.score_b}`).join(', ')} · en ${m.sets_gagnants} sets gagnants</small>
+    <small>${m.forfait_cote ? `Forfait ${m.forfait_cote === 'A' ? 'du côté A' : 'du côté B'} (aucun point)` : `${m.manches.map((x) => `${x.score_a}-${x.score_b}`).join(', ')} · en ${m.sets_gagnants} sets gagnants`}</small>
     ${m.statut === 'valide' && m.type_match === 'simple' && a && b && a.points_finaux !== null && html`<small>
       Points : ${nomJ(ctx, a.licencie_id)} ${signe(a.points_finaux)} · ${nomJ(ctx, b.licencie_id)} ${signe(b.points_finaux)}</small>`}
     <div class="etiquettes">
@@ -219,7 +229,7 @@ export function HistoriqueMatchs({ ctx, l }) {
           <div class="match-tete"><strong>${comp?.nom || '—'}</strong>${m.tour ? html`<small>${m.tour}</small>` : ''}
             <${Pastille} genre=${mesSets > sesSets ? 'actif' : 'archive'}>${mesSets > sesSets ? 'Victoire' : 'Défaite'}<//></div>
           <div>contre ${cote(ctx, adverse)} · <strong>${mesSets} - ${sesSets}</strong></div>
-          <small>${m.manches.map((x) => (moi.cote === 'A' ? `${x.score_a}-${x.score_b}` : `${x.score_b}-${x.score_a}`)).join(', ')}${moi.points_finaux !== null && m.type_match === 'simple' ? ' · ' + signe(moi.points_finaux) + ' pts' : ''}</small>
+          <small>${m.forfait_cote ? 'Forfait (aucun point)' : m.manches.map((x) => (moi.cote === 'A' ? `${x.score_a}-${x.score_b}` : `${x.score_b}-${x.score_a}`)).join(', ')}${moi.points_finaux !== null && m.type_match === 'simple' ? ' · ' + signe(moi.points_finaux) + ' pts' : ''}</small>
         </li>`;
       })}
     </ul>
