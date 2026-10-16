@@ -215,8 +215,8 @@ function Formulaire({ ctx, c }) {
         <select id="p-cat" disabled=${dis} value=${f.categorie_min ? 'VET' : f.categorie_max} onChange=${(e) => maj(e.target.value === 'VET' ? { categorie_min: 'veteran', categorie_max: '' } : { categorie_min: '', categorie_max: e.target.value })}>
           ${Object.entries(CATEGORIES_MAX).map(([k, v]) => html`<option key=${k} value=${k}>${v}</option>`)}
         </select><//>
-      <${Champ} id="p-coef" libelle="Coefficient" aide=${ctx.estCadre ? 'Multiplie les points gagnés ou perdus à chaque match.' : 'Fixé par la fédération (1 à la création).'}>
-        <select id="p-coef" disabled=${dis || !ctx.estCadre} value=${f.coefficient} onChange=${(e) => maj({ coefficient: e.target.value })}>
+      <${Champ} id="p-coef" libelle="Coefficient" aide="Multiplie les points gagnés ou perdus à chaque match.">
+        <select id="p-coef" disabled=${dis} value=${f.coefficient} onChange=${(e) => maj({ coefficient: e.target.value })}>
           ${COEFS.map((k) => html`<option key=${k} value=${k}>${Number(k).toLocaleString('fr-FR')}</option>`)}
         </select><//>
       <${Champ} id="p-pmax" libelle="Points maximum (classement)" aide="Vide = aucune limite. Ex. 599 : seuls les joueurs de 599 points et moins peuvent s'inscrire." erreur=${erreurs.points_max}>
@@ -288,7 +288,7 @@ function Etat({ ctx, c }) {
     </div>`}
     <div class="actions">
       ${c.statut === 'brouillon' && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => changer('ouverte', 'Inscriptions ouvertes.')}>Ouvrir les inscriptions</button>
-        <button class="btn btn-danger" type="button" disabled=${occupe} onClick=${() => setSuppr(true)}>Supprimer</button>`}
+        ${(ctx.estCadre || (ctx.moi && c.created_by === ctx.moi.id)) && html`<button class="btn btn-danger" type="button" disabled=${occupe} onClick=${() => setSuppr(true)}>Supprimer</button>`}`}
       ${c.statut === 'ouverte' && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => changer('cloturee', 'Inscriptions closes.')}>Clôturer les inscriptions</button>`}
       ${c.statut === 'cloturee' && html`${ctx.estCadre && html`<button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${() => changer('terminee', 'Compétition terminée.')}>Marquer comme terminée</button>`}
         <button class="btn btn-secondaire" type="button" disabled=${occupe} onClick=${() => changer('ouverte', 'Inscriptions rouvertes.')}>Rouvrir les inscriptions</button>`}

@@ -4,16 +4,31 @@
 --   · inscrit et désinscrit les clubs sur ses compétitions
 --   · choisit les autres juges de ses compétitions
 -- Il ne voit ni factures ni paiements, ni téléphone / e-mail / représentant légal des licenciés.
+-- Seul le cadre fédéral donne le rôle « juge-arbitre » (page Comptes) ; ce rôle ouvre le droit de créer des compétitions.
+-- Script rejouable sans risque.
 begin;
 
 -- ---------- 1) Outils de droits ----------
+-- Qui a déjà été désigné juge sur une compétition reçoit le rôle (pour ne rien perdre)
+insert into attributions_roles (licencie_id, role)
+select distinct cj.licencie_id, 'juge_arbitre'::role_app from competition_juges cj
+ where not exists (select 1 from attributions_roles r where r.licencie_id = cj.licencie_id and r.role = 'juge_arbitre');
+
 create or replace function est_juge_arbitre() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
-    select 1 from competition_juges cj
-    join licencies l on l.id = cj.licencie_id
-    where l.user_id = auth.uid())
+    select 1 from attributions_roles ar
+    join licencies l on l.id = ar.licencie_id
+    where l.user_id = auth.uid() and ar.role = 'juge_arbitre')
 $$;
+
+create or replace function a_role_juge_arbitre(p_lic uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from attributions_roles r where r.licencie_id = p_lic and r.role = 'juge_arbitre')
+$$;
+
+-- Auteur d'une compétition (un juge ne supprime que les brouillons qu'il a créés)
+alter table competitions add column if not exists created_by uuid references licencies(id) on delete set null;
 
 -- Le juge ne lit plus la fiche complète des licenciés (contacts, représentant) : il passe par annuaire_juge().
 create or replace function juge_voit_licencie(p_lic uuid) returns boolean
@@ -29,7 +44,8 @@ begin
   return json_build_object(
     'licencies', coalesce((select json_agg(json_build_object(
         'id', l.id, 'nom', l.nom, 'prenom', l.prenom, 'date_naissance', l.date_naissance, 'sexe', l.sexe,
-        'club_id', l.club_id, 'points', l.points, 'statut', l.statut)) from licencies l), '[]'::json),
+        'club_id', l.club_id, 'points', l.points, 'statut', l.statut,
+        'juge_arbitre', exists (select 1 from attributions_roles r where r.licencie_id = l.id and r.role = 'juge_arbitre'))) from licencies l), '[]'::json),
     'licences', coalesce((select json_agg(json_build_object(
         'id', x.id, 'licencie_id', x.licencie_id, 'saison_id', x.saison_id, 'club_id', x.club_id,
         'type', x.type, 'statut', x.statut)) from licences x), '[]'::json));
@@ -46,16 +62,13 @@ create policy competitions_juge_maj on competitions for update to authenticated
   with check (est_juge_de(id) and statut <> 'terminee');
 drop policy if exists competitions_juge_suppr on competitions;
 create policy competitions_juge_suppr on competitions for delete to authenticated
-  using (est_juge_de(id) and statut = 'brouillon');
+  using (est_juge_de(id) and statut = 'brouillon' and created_by is not null and created_by = mon_licencie_id());
 
--- Le coefficient (qui pèse sur le classement) reste fixé par la fédération
+-- Un juge ne peut pas déclarer une compétition terminée (réservé à la fédération)
 create or replace function verrou_competition_juge() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if auth.uid() is not null and not est_cadre() then
-    if new.coefficient is distinct from old.coefficient then
-      raise exception 'Le coefficient est fixé par la fédération.';
-    end if;
     if new.statut = 'terminee' and old.statut is distinct from 'terminee' then
       raise exception 'Seule la fédération peut déclarer une compétition terminée.';
     end if;
@@ -76,12 +89,13 @@ begin
   if not (est_cadre() or est_juge_arbitre()) then
     raise exception 'Réservé aux juges-arbitres et à la fédération.';
   end if;
-  r := jsonb_populate_record(null::competitions, p - 'id' - 'statut' - 'created_at' - 'evenement_id' - 'coefficient');
+  r := jsonb_populate_record(null::competitions, p - 'id' - 'statut' - 'created_at' - 'evenement_id' - 'created_by');
   r.id := gen_random_uuid();
   r.statut := 'brouillon';
   r.created_at := now();
   r.evenement_id := null;
-  r.coefficient := case when est_cadre() then coalesce((p->>'coefficient')::numeric, 1.00) else 1.00 end;
+  r.coefficient := coalesce((p->>'coefficient')::numeric, 1.00);
+  r.created_by := v_moi;
   r.montant_xpf := coalesce(r.montant_xpf, 0);
   r.ouverte_a_tous := coalesce(r.ouverte_a_tous, false);
   r.genre := coalesce(r.genre, 'ouvert');
@@ -100,7 +114,8 @@ grant execute on function creer_competition_juge(jsonb) to authenticated;
 drop policy if exists juges_juge_lecture on competition_juges;
 create policy juges_juge_lecture on competition_juges for select to authenticated using (est_juge_de(competition_id));
 drop policy if exists juges_juge_ajout on competition_juges;
-create policy juges_juge_ajout on competition_juges for insert to authenticated with check (est_juge_de(competition_id));
+create policy juges_juge_ajout on competition_juges for insert to authenticated
+  with check (est_juge_de(competition_id) and a_role_juge_arbitre(licencie_id));
 drop policy if exists juges_juge_suppr on competition_juges;
 create policy juges_juge_suppr on competition_juges for delete to authenticated using (est_juge_de(competition_id));
 
