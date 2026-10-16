@@ -137,31 +137,20 @@ create trigger trg_garde_dernier_juge before delete on competition_juges
 -- ---------- 6) Inscriptions : le juge agit comme la fédération sur ses compétitions ----------
 do $$
 declare
-  v_def text; v_new text;
+  f text; v_def text; v_new text; v_arg text;
 begin
-  select pg_get_functiondef(p.oid) into v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public' and p.proname = 'enregistrer_inscription';
-  if position('est_juge_de' in v_def) = 0 then
-    v_new := replace(v_def, 'if not (est_cadre() or est_responsable_de(p_club)) then',
-                            'if not (est_cadre() or est_juge_de(p_competition) or est_responsable_de(p_club)) then');
-    if v_new = v_def then raise exception 'enregistrer_inscription : point 1 introuvable'; end if;
-    v_def := v_new;
-    v_new := replace(v_def, E'if est_cadre() then\n    if c.statut not in', E'if est_cadre() or est_juge_de(p_competition) then\n    if c.statut not in');
-    if v_new = v_def then raise exception 'enregistrer_inscription : point 2 introuvable'; end if;
-    execute v_new;
-  end if;
-
-  select pg_get_functiondef(p.oid) into v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public' and p.proname = 'annuler_inscription';
-  if position('est_juge_de' in v_def) = 0 then
-    v_new := replace(v_def, 'if not (est_cadre() or est_responsable_de(i.club_id)) then',
-                            'if not (est_cadre() or est_juge_de(i.competition_id) or est_responsable_de(i.club_id)) then');
-    if v_new = v_def then raise exception 'annuler_inscription : point 1 introuvable'; end if;
-    v_def := v_new;
-    v_new := replace(v_def, E'if est_cadre() then\n    if c.statut = ''terminee''', E'if est_cadre() or est_juge_de(c.id) then\n    if c.statut = ''terminee''');
-    if v_new = v_def then raise exception 'annuler_inscription : point 2 introuvable'; end if;
-    execute v_new;
-  end if;
+  -- Dans ces deux fonctions, chaque test « est_cadre() » devient « est_cadre() ou juge de cette compétition »
+  foreach f in array array['enregistrer_inscription', 'annuler_inscription'] loop
+    select pg_get_functiondef(p.oid) into v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = f order by p.oid desc limit 1;
+    if v_def is null then raise exception 'Fonction % introuvable', f; end if;
+    if position('est_juge_de' in v_def) = 0 then
+      v_arg := case f when 'enregistrer_inscription' then 'p_competition' else 'i.competition_id' end;
+      v_new := replace(v_def, 'est_cadre()', '(est_cadre() or est_juge_de(' || v_arg || '))');
+      if v_new = v_def then raise exception 'Fonction % : rien à adapter', f; end if;
+      execute v_new;
+    end if;
+  end loop;
 end $$;
 
 create or replace function retirer_joueur_equipe(p_inscription uuid, p_licencie uuid) returns void
