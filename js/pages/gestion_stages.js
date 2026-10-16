@@ -159,6 +159,7 @@ function Detail({ stage, inscriptions, ctx, data, recharger, onRetour, onModifie
       ${stage.statut === 'ouvert' && html`<p class="aide">Lien à publier sur Facebook (page des stages) : ${lienStage}</p>`}
       <div class="etiquettes">
         <a class="btn btn-primaire" href=${'#/stages?stage=' + stage.id}>Ajouter un participant</a>
+        <a class="btn btn-secondaire" href="#/inviter-stage">Inviter des parents par e-mail</a>
         <button class="btn btn-secondaire" type="button" onClick=${onModifier}>Modifier le stage</button>
         <button class="btn btn-secondaire" type="button" disabled=${inscriptions.length === 0} onClick=${exporter}>Exporter (CSV)</button>
         <button class="btn btn-secondaire" type="button" disabled=${inscrits.length === 0} onClick=${toutesLesFiches}>Toutes les fiches à signer (PDF)</button>

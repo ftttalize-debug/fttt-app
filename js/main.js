@@ -16,6 +16,7 @@ import { PageSimulateur } from './pages/simulateur.js';
 import { PageCalendrier } from './pages/calendrier.js';
 import { PageSaison } from './pages/saison.js';
 import { PageStages } from './pages/stages.js';
+import { PageInviterStage } from './pages/inviter_stage.js';
 import { PageGestionStages } from './pages/gestion_stages.js';
 import { PageSinscrire } from './pages/sinscrire.js';
 import { PageMonProfil } from './pages/monprofil.js';
@@ -70,6 +71,7 @@ function Cadre({ ctx, route, children }) {
           ${lienNav('classement', ['classement'], 'Classement', 'classement')}
           ${lienNav('simulateur', ['simulateur'], 'Simulateur', 'points')}
           ${ctx.estCadre && lienNav('gestion-stages', ['gestion-stages'], 'Stages', 'inscriptions')}
+          ${ctx.estResponsable && !ctx.estCadre && lienNav('inviter-stage', ['inviter-stage'], 'Inviter aux stages', 'inscriptions')}
           ${ctx.estCadre && lienNav('renouvellements', ['renouvellements'], 'Renouvellements', 'licencies')}
           ${ctx.estCadre && lienNav('points', ['points'], 'Points', 'journal')}
           ${ctx.estCadre && lienNav('comptes', ['comptes'], 'Comptes', 'profil')}
@@ -113,6 +115,7 @@ function Pages({ ctx, route }) {
   if (p === 'saison') return html`<${PageSaison} />`;
   if (p === 'stages') return html`<${PageStages} />`;
   if (p === 'gestion-stages' && ctx.estCadre) return html`<${PageGestionStages} ctx=${ctx} />`;
+  if (p === 'inviter-stage' && (ctx.estCadre || ctx.estResponsable)) return html`<${PageInviterStage} ctx=${ctx} />`;
   if (p === 'sinscrire') return html`<${PageSinscrire} />`;
   if (p === 'monprofil') return html`<${PageMonProfil} />`;
   if (p === 'simulateur') return html`<${PageSimulateur} route=${route} />`;
