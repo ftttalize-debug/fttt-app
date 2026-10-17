@@ -3,6 +3,7 @@ import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
 import { lien, naviguer, norm, nomComplet, emailValide, msgErreur, fmtDate } from '../lib.js';
 import { Icone, Pastille, Champ, Dialogue, ChoixPersonne, toast } from '../ui.js';
+import { fmtXpf } from './competitions.js';
 
 function responsablesDe(ctx, clubId) {
   return ctx.roles
@@ -15,8 +16,10 @@ export function PageClubs({ ctx }) {
   const { clubs, licencies, estCadre } = ctx;
   const lignes = useMemo(() => clubs.map((c) => {
     const membres = licencies.filter((l) => l.club_id === c.id);
-    return { club: c, actifs: membres.filter((l) => l.statut === 'actif').length, total: membres.length, resp: responsablesDe(ctx, c.id) };
-  }), [clubs, licencies, ctx.roles]);
+    const fact = ctx.factures.filter((f) => f.club_id === c.id && f.statut !== 'annulee');
+    const du = fact.filter((f) => f.statut === 'generee' || f.statut === 'envoyee').reduce((n, f) => n + f.montant_xpf, 0);
+    return { club: c, actifs: membres.filter((l) => l.statut === 'actif').length, total: membres.length, resp: responsablesDe(ctx, c.id), nbFactures: fact.length, du };
+  }), [clubs, licencies, ctx.roles, ctx.factures]);
   const trier = (t) => [...t].sort((x, y) => x.club.nom.localeCompare(y.club.nom, 'fr'));
   const affilies = trier(lignes.filter((x) => x.actifs > 0));
   const nonAffilies = trier(lignes.filter((x) => x.actifs === 0));
@@ -30,7 +33,7 @@ export function PageClubs({ ctx }) {
       ${[['Clubs affiliés', affilies], ['Clubs non affiliés', nonAffilies]].map(([titre, liste]) => liste.length > 0 && html`<section key=${titre}>
         <h2 class="groupe-titre">${titre} (${liste.length})</h2>
         <ul class="liste">
-      ${liste.map(({ club, actifs, total, resp }) => html`<li key=${club.id}>
+      ${liste.map(({ club, actifs, total, resp, nbFactures, du }) => html`<li key=${club.id}>
         <a class=${'ligne' + (club.actif ? '' : ' ligne-archive')} style="display:flex" href=${lien(['clubs', club.id])}>
           <span class="ligne-nom">
             <strong>${club.nom}${club.sigle ? ` (${club.sigle})` : ''}</strong>
@@ -39,6 +42,7 @@ export function PageClubs({ ctx }) {
           <span class="etiquettes">
             <${Pastille} genre="actif">${actifs} actif${actifs > 1 ? 's' : ''}<//>
             <${Pastille}>${total} fiche${total > 1 ? 's' : ''}<//>
+            ${nbFactures > 0 && (du > 0 ? html`<${Pastille} genre="alerte">${fmtXpf(du)} à régler<//>` : html`<${Pastille} genre="actif">À jour de ses factures<//>`)}
             ${!club.actif && html`<${Pastille} genre="archive">Inactif<//>`}
           </span>
         </a>

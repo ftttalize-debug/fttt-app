@@ -1,10 +1,41 @@
 // Liste des licenciés : recherche, filtres, export CSV.
 import { html, useState, useMemo } from '../preact.js';
-import { lien, naviguer, estMineur, norm, fmtPts, fmtDate, aujourdhuiISO, telechargerCsv, CATEGORIES, TYPES_LICENCE } from '../lib.js';
-import { Icone, Pastille } from '../ui.js';
+import { lien, naviguer, estMineur, norm, fmtPts, fmtDate, aujourdhuiISO, telechargerCsv, nomComplet, ageExact, categorie, CATEGORIES, TYPES_LICENCE } from '../lib.js';
+import { Icone, Pastille, Pliable } from '../ui.js';
 
 const PAGE = 40;
 const repManquant = (l) => l.statut === 'actif' && estMineur(l.date_naissance) && !l.representant_legal_id && !l.representant_nom;
+
+/** Liste réglementaire des licenciés au 31 mai d'une année, avec toutes leurs informations (CSV lisible par Excel). */
+function CarteListe31Mai({ ctx }) {
+  const annees = [...new Set(ctx.saisons.map((s) => Number(String(s.date_debut).slice(0, 4)) + 1))].sort((a, b) => b - a);
+  const dejaPasse = annees.find((a) => `${a}-05-31` <= aujourdhuiISO());
+  const [annee, setAnnee] = useState(dejaPasse || annees[0]);
+  if (!annees.length) return null;
+  const ref = `${annee}-05-31`;
+  const saison = ctx.saisons.find((s) => s.date_debut <= ref && ref <= s.date_fin);
+  const lignes = saison ? ctx.licencies.filter((l) => !l.annuaire).map((l) => ({ l, lc: (l.historique || []).find((x) => x.saison_id === saison.id && x.statut === 'active') })).filter((x) => x.lc) : [];
+  function exporter() {
+    const d = new Date(ref + 'T12:00:00');
+    const entetes = ['N° de licence', 'N° de licence saison', 'Nom', 'Prénom', 'Sexe', 'Date de naissance', `Âge au 31/05/${annee}`, 'Catégorie', 'Club', 'Type de licence', 'Saison', 'Licence délivrée le',
+      'Certificat médical', 'Type de certificat', 'Date du certificat', 'Questionnaire de santé', 'Handicap', 'Points', 'E-mail', 'Téléphone', 'Représentant légal', 'Tél. représentant', 'E-mail représentant'];
+    const rows = lignes.map(({ l, lc }) => {
+      const rep = l.representant_nom || (l.representant_legal_id ? nomComplet(ctx.licencieParId.get(l.representant_legal_id) || {}) : '');
+      return [l.numero_licence || '', lc.numero || '', l.nom, l.prenom, l.sexe, fmtDate(l.date_naissance), ageExact(l.date_naissance, d), categorie(l.date_naissance, d),
+        ctx.clubParId.get(lc.club_id)?.nom || l.clubNom, TYPES_LICENCE[lc.type] || lc.type, saison.libelle, fmtDate(String(lc.created_at).slice(0, 10)),
+        lc.certificat_fourni ? 'Reçu' : 'Manquant', lc.certificat_type || '', lc.certificat_date ? fmtDate(lc.certificat_date) : '', lc.questionnaire_fourni ? 'Oui' : '',
+        l.handicap ? 'Oui' : 'Non', fmtPts(l.points), l.email || '', l.telephone || '', rep, l.representant_telephone || '', l.representant_email || ''];
+    }).sort((a, b) => norm(a[2]).localeCompare(norm(b[2])) || norm(a[3]).localeCompare(norm(b[3])));
+    telechargerCsv(`licencies-au-31-mai-${annee}.csv`, entetes, rows);
+  }
+  return html`<${Pliable} titre="Liste des licenciés au 31 mai" sous="Obligation réglementaire : tous les licenciés avec leurs informations" ouvert=${false}>
+    <div class="filtres-ligne"><select aria-label="Année" value=${annee} onChange=${(e) => setAnnee(Number(e.target.value))}>
+      ${annees.map((a) => html`<option key=${a} value=${a}>Au 31 mai ${a}</option>`)}</select></div>
+    ${saison ? html`<p class="aide">Saison ${saison.libelle} · ${lignes.length} licencié${lignes.length > 1 ? 's' : ''} avec une licence active. Le fichier contient l'identité, le club, le type de licence, le certificat médical, les contacts et le représentant légal des mineurs. Données personnelles : à conserver et transmettre avec précaution.</p>
+      <button class="btn btn-primaire" type="button" disabled=${!lignes.length} onClick=${exporter}><${Icone} nom="telecharger" taille=${18} /> Télécharger la liste au 31 mai ${annee} (CSV)</button>`
+      : html`<p class="vide">Aucune saison ne couvre le 31 mai ${annee}.</p>`}
+  <//>`;
+}
 
 export function PageLicencies({ ctx, route }) {
   const { licenciesGeres: licencies, clubs, saison, estCadre } = ctx;
@@ -60,6 +91,8 @@ export function PageLicencies({ ctx, route }) {
         ${estCadre && html`<a class="btn btn-primaire" href=${lien(['licencies', 'nouveau'])}><${Icone} nom="plus" taille=${20} /> Nouveau licencié</a>`}
       </div>
     </div>
+
+    ${estCadre && html`<${CarteListe31Mai} ctx=${ctx} />`}
 
     <section class="carte filtres" aria-label="Filtres">
       <div class="recherche">
