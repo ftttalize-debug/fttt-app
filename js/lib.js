@@ -168,3 +168,13 @@ export function fmtVariation(n) {
   const t = Math.abs(x).toFixed(1).replace('.0', '').replace('.', ',');
   return x > 0 ? `+${t}` : x < 0 ? `−${t}` : '0';
 }
+
+/** Îles de la Polynésie française par archipel (liste à choisir pour l'adresse d'un licencié). */
+export const ILES = [
+  ['Îles du Vent', ['Tahiti', 'Moorea', 'Maiao', 'Tetiaroa']],
+  ['Îles Sous-le-Vent', ['Raiatea', 'Tahaa', 'Huahine', 'Bora Bora', 'Maupiti']],
+  ['Tuamotu', ['Anaa', 'Ahe', 'Amanu', 'Apataki', 'Aratika', 'Arutua', 'Faaite', 'Fakarava', 'Fangatau', 'Hao', 'Hikueru', 'Katiu', 'Kauehi', 'Makemo', 'Manihi', 'Marutea Sud', 'Mataiva', 'Napuka', 'Niau', 'Nukutavake', 'Pukapuka', 'Pukarua', 'Raraka', 'Raroia', 'Reao', 'Rangiroa', 'Takapoto', 'Takaroa', 'Takume', 'Tatakoto', 'Tikehau', 'Toau', 'Tureia']],
+  ['Marquises', ['Nuku Hiva', 'Hiva Oa', 'Ua Pou', 'Ua Huka', 'Tahuata', 'Fatu Hiva']],
+  ['Australes', ['Rurutu', 'Tubuai', 'Raivavae', 'Rimatara', 'Rapa']],
+  ['Gambier', ['Mangareva', 'Taravai', 'Akamaru', 'Aukena']]
+];

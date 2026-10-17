@@ -4,7 +4,7 @@ import { html, useState, useEffect, useMemo } from '../preact.js';
 import { api } from '../data.js';
 import {
   lien, naviguer, norm, fmtPts, fmtDate, nomComplet, estMineur, emailValide, aujourdhuiISO, msgErreur,
-  parseDate, TYPES_LICENCE, TYPES_CERTIFICAT
+  parseDate, TYPES_LICENCE, TYPES_CERTIFICAT, ILES
 } from '../lib.js';
 import { Icone, Pastille, Champ, Dialogue, toast } from '../ui.js';
 import { HistoriqueMatchs } from './matchs.js';
@@ -22,6 +22,9 @@ const normaliser = (f) => ({
   club_id: f.club_id || null,
   email: f.email.trim().toLowerCase() || null,
   telephone: f.telephone.trim() || null,
+  adresse: (f.adresse || '').trim() || null,
+  commune: (f.commune || '').trim() || null,
+  ile: f.ile || null,
   handicap: !!f.handicap,
   representant_nom: (f.representant_nom || '').trim() || null,
   representant_telephone: (f.representant_telephone || '').trim() || null,
@@ -30,7 +33,7 @@ const normaliser = (f) => ({
 
 const formDepuis = (l) => ({
   nom: l.nom, prenom: l.prenom, date_naissance: l.date_naissance, sexe: l.sexe, club_id: l.club_id || '',
-  email: l.email || '', telephone: l.telephone || '', handicap: !!l.handicap,
+  email: l.email || '', telephone: l.telephone || '', adresse: l.adresse || '', commune: l.commune || '', ile: l.ile || '', handicap: !!l.handicap,
   representant_nom: l.representant_nom || '',
   representant_telephone: l.representant_telephone || '',
   representant_email: l.representant_email || ''
@@ -90,6 +93,21 @@ function ChampsIdentite({ f, maj, erreurs, ctx, idExclu }) {
     <//>
     <${Champ} id="f-tel" libelle="Téléphone">
       <input id="f-tel" type="tel" autocomplete="off" value=${f.telephone} onInput=${(e) => maj({ telephone: e.target.value })} />
+    <//>
+    <div class="plein">
+      <${Champ} id="f-adresse" libelle="Adresse" aide="Écris-la comme tu la dis : quartier, rue, PK ou lieu-dit, avec un repère si besoin (ex. « PK 12 côté mer, après l'école »).">
+        <input id="f-adresse" type="text" autocomplete="street-address" value=${f.adresse || ''} onInput=${(e) => maj({ adresse: e.target.value })} />
+      <//>
+    </div>
+    <${Champ} id="f-commune" libelle="Commune">
+      <input id="f-commune" type="text" autocomplete="address-level2" placeholder="ex. Pirae" value=${f.commune || ''} onInput=${(e) => maj({ commune: e.target.value })} />
+    <//>
+    <${Champ} id="f-ile" libelle="Île">
+      <select id="f-ile" value=${f.ile || ''} onChange=${(e) => maj({ ile: e.target.value })}>
+        <option value="">Choisir…</option>
+        ${ILES.map(([archipel, iles]) => html`<optgroup key=${archipel} label=${archipel}>${iles.map((i) => html`<option key=${i} value=${i}>${i}</option>`)}</optgroup>`)}
+        <option value="Hors Polynésie française">Hors Polynésie française</option>
+      </select>
     <//>
     <div class="plein">
       <${Champ} id="f-rep" libelle=${'Représentant légal (nom du parent ou tuteur)' + (mineur ? ' – obligatoire' : '')}
@@ -360,6 +378,7 @@ function LectureFiche({ ctx, l, estSoi }) {
       <div><dt>Catégorie</dt><dd>${l.categorie}</dd></div>
       <div><dt>E-mail</dt><dd>${l.email || '—'}</dd></div>
       <div><dt>Téléphone</dt><dd>${l.telephone || '—'}</dd></div>
+      <div><dt>Adresse</dt><dd>${[l.adresse, l.commune, l.ile].filter(Boolean).join(', ') || '—'}</dd></div>
       ${(estSoi || ctx.estCadre) && html`<div><dt>Para-tennis de table</dt><dd>${l.handicap ? 'Oui' : 'Non'}</dd></div>`}
       ${rep && html`<div><dt>Représentant légal</dt><dd>${rep}</dd></div>`}
       ${rep && l.representant_telephone && html`<div><dt>Téléphone du représentant</dt><dd>${l.representant_telephone}</dd></div>`}
@@ -507,8 +526,8 @@ export function PageNouveauLicencie({ ctx }) {
         saison: ctx.saison.id, type: g.type, certType: g.certType, certDate: g.certDate,
         certFourni: g.certFourni, questionnaire: g.questionnaire, photo: g.photo
       });
-      if (n.representant_telephone || n.representant_email) {
-        await api.majLicencie(nouvelId, { representant_telephone: n.representant_telephone, representant_email: n.representant_email });
+      if (n.representant_telephone || n.representant_email || n.adresse || n.commune || n.ile) {
+        await api.majLicencie(nouvelId, { representant_telephone: n.representant_telephone, representant_email: n.representant_email, adresse: n.adresse, commune: n.commune, ile: n.ile });
       }
       await ctx.recharger();
       toast(`${n.prenom} ${n.nom} est licencié(e) pour la saison ${ctx.saison.libelle}.`);

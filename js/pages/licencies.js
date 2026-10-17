@@ -18,20 +18,20 @@ function CarteListe31Mai({ ctx }) {
   function exporter() {
     const d = new Date(ref + 'T12:00:00');
     const entetes = ['N° de licence', 'N° de licence saison', 'Nom', 'Prénom', 'Sexe', 'Date de naissance', `Âge au 31/05/${annee}`, 'Catégorie', 'Club', 'Type de licence', 'Saison', 'Licence délivrée le',
-      'Certificat médical', 'Type de certificat', 'Date du certificat', 'Questionnaire de santé', 'Handicap', 'Points', 'E-mail', 'Téléphone', 'Représentant légal', 'Tél. représentant', 'E-mail représentant'];
+      'Certificat médical', 'Type de certificat', 'Date du certificat', 'Questionnaire de santé', 'Handicap', 'Points', 'Adresse', 'Commune', 'Île', 'E-mail', 'Téléphone', 'Représentant légal', 'Tél. représentant', 'E-mail représentant'];
     const rows = lignes.map(({ l, lc }) => {
       const rep = l.representant_nom || (l.representant_legal_id ? nomComplet(ctx.licencieParId.get(l.representant_legal_id) || {}) : '');
       return [l.numero_licence || '', lc.numero || '', l.nom, l.prenom, l.sexe, fmtDate(l.date_naissance), ageExact(l.date_naissance, d), categorie(l.date_naissance, d),
         ctx.clubParId.get(lc.club_id)?.nom || l.clubNom, TYPES_LICENCE[lc.type] || lc.type, saison.libelle, fmtDate(String(lc.created_at).slice(0, 10)),
         lc.certificat_fourni ? 'Reçu' : 'Manquant', lc.certificat_type || '', lc.certificat_date ? fmtDate(lc.certificat_date) : '', lc.questionnaire_fourni ? 'Oui' : '',
-        l.handicap ? 'Oui' : 'Non', fmtPts(l.points), l.email || '', l.telephone || '', rep, l.representant_telephone || '', l.representant_email || ''];
+        l.handicap ? 'Oui' : 'Non', fmtPts(l.points), l.adresse || '', l.commune || '', l.ile || '', l.email || '', l.telephone || '', rep, l.representant_telephone || '', l.representant_email || ''];
     }).sort((a, b) => norm(a[2]).localeCompare(norm(b[2])) || norm(a[3]).localeCompare(norm(b[3])));
     telechargerCsv(`licencies-au-31-mai-${annee}.csv`, entetes, rows);
   }
   return html`<${Pliable} titre="Liste des licenciés au 31 mai" sous="Obligation réglementaire : tous les licenciés avec leurs informations" ouvert=${false}>
     <div class="filtres-ligne"><select aria-label="Année" value=${annee} onChange=${(e) => setAnnee(Number(e.target.value))}>
       ${annees.map((a) => html`<option key=${a} value=${a}>Au 31 mai ${a}</option>`)}</select></div>
-    ${saison ? html`<p class="aide">Saison ${saison.libelle} · ${lignes.length} licencié${lignes.length > 1 ? 's' : ''} avec une licence active. Le fichier contient l'identité, le club, le type de licence, le certificat médical, les contacts et le représentant légal des mineurs. Données personnelles : à conserver et transmettre avec précaution.</p>
+    ${saison ? html`<p class="aide">Saison ${saison.libelle} · ${lignes.length} licencié${lignes.length > 1 ? 's' : ''} avec une licence active. Le fichier contient l'identité, l'adresse (quartier ou rue, commune, île), le club, le type de licence, le certificat médical, les contacts et le représentant légal des mineurs. Données personnelles : à conserver et transmettre avec précaution.</p>
       <button class="btn btn-primaire" type="button" disabled=${!lignes.length} onClick=${exporter}><${Icone} nom="telecharger" taille=${18} /> Télécharger la liste au 31 mai ${annee} (CSV)</button>`
       : html`<p class="vide">Aucune saison ne couvre le 31 mai ${annee}.</p>`}
   <//>`;
