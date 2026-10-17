@@ -39,6 +39,7 @@ export function construireContexte(data, session) {
   return {
     data,
     saison,
+    saisons: saisons.slice().sort((a, b) => String(b.date_debut).localeCompare(String(a.date_debut))),
     saisonParId,
     clubs,
     clubParId,
