@@ -5,6 +5,7 @@ import { lien, naviguer, fmtDate, msgErreur, aujourdhuiISO, telechargerCsv } fro
 import { Icone, Pastille, toast, Pliable } from '../ui.js';
 import { fmtXpf } from './competitions.js';
 import { telechargerFacture } from '../facture-pdf.js';
+import { telechargerFacturePhase, detailPhase, bornesPhase } from '../facture-phase-pdf.js';
 
 export const STATUTS_FACTURE = { generee: 'À envoyer', envoyee: 'Envoyée', reglee: 'Réglée', annulee: 'Annulée' };
 const GENRE = { generee: 'alerte', envoyee: 'neutre', reglee: 'actif', annulee: 'archive' };
@@ -66,6 +67,34 @@ function ParCompetition({ ctx, liste }) {
   })}</div>`;
 }
 
+/** Facture de phase d'un club : toutes les compétitions de la phase (1 = juillet à décembre, 2 = janvier à juin) avec le détail des joueurs. */
+function CarteFacturePhase({ ctx }) {
+  const clubs = ctx.estCadre ? ctx.clubs.slice().sort((a, b) => a.nom.localeCompare(b.nom)) : ctx.clubsResponsable.map((id) => ctx.clubParId.get(id)).filter(Boolean);
+  const [clubId, setClubId] = useState(clubs[0]?.id || '');
+  const [idSaison, setIdSaison] = useState(ctx.saison?.id || '');
+  const [phase, setPhase] = useState(new Date().getMonth() >= 6 ? 1 : 2);
+  const [occupe, setOccupe] = useState(false);
+  const saison = ctx.saisonParId.get(idSaison) || ctx.saison;
+  if (!saison || !clubs.length) return null;
+  const d = detailPhase(ctx, clubId, saison, phase);
+  async function pdf() {
+    setOccupe(true);
+    try { await telechargerFacturePhase(ctx, clubId, saison, phase); } catch (e) { toast(msgErreur(e), 'erreur'); } finally { setOccupe(false); }
+  }
+  return html`<${Pliable} titre="Facture de phase par club" sous="Toutes les compétitions d'une phase, avec les joueurs" ouvert=${false}>
+    <div class="filtres-ligne">
+      ${clubs.length > 1 && html`<select aria-label="Club" value=${clubId} onChange=${(e) => setClubId(e.target.value)}>${clubs.map((c) => html`<option key=${c.id} value=${c.id}>${c.nom}</option>`)}</select>`}
+      <select aria-label="Saison" value=${saison.id} onChange=${(e) => setIdSaison(e.target.value)}>${ctx.saisons.map((s) => html`<option key=${s.id} value=${s.id}>Saison ${s.libelle}</option>`)}</select>
+      <select aria-label="Phase" value=${phase} onChange=${(e) => setPhase(Number(e.target.value))}>
+        <option value="1">${bornesPhase(saison, 1).libelle}</option><option value="2">${bornesPhase(saison, 2).libelle}</option></select>
+    </div>
+    ${d.comps.length === 0 ? html`<p class="vide">Aucune compétition facturée pour ce club sur cette phase.</p>` : html`<div>
+      <ul class="liste-simple">${d.comps.map((c) => html`<li key=${c.comp.id}><strong>${c.comp.nom}</strong> · ${fmtDate(c.comp.date_debut)} · ${fmtXpf(c.total)}</li>`)}</ul>
+      <p class="avis">Total de la phase : <strong>${fmtXpf(d.total)}</strong>${d.regle > 0 ? ` · déjà réglé ${fmtXpf(d.regle)} · reste ${fmtXpf(d.total - d.regle)}` : ''}</p>
+      <button class="btn btn-primaire" type="button" disabled=${occupe} onClick=${pdf}><${Icone} nom="telecharger" taille=${18} /> Télécharger la facture de phase (PDF)</button></div>`}
+  <//>`;
+}
+
 export function PageFactures({ ctx, route }) {
   const q = route.query;
   const statut = q.statut || 'toutes';
@@ -96,6 +125,7 @@ export function PageFactures({ ctx, route }) {
       ${ctx.estCadre && ctx.clubs.length > 1 && html`<div class="filtres-ligne"><select aria-label="Club" value=${q.club || ''} onChange=${(e) => change('club', e.target.value)}>
         <option value="">Tous les clubs</option>${ctx.clubs.map((c) => html`<option key=${c.id} value=${c.id}>${c.nom}</option>`)}</select></div>`}
     </section>
+    <${CarteFacturePhase} ctx=${ctx} />
     ${comp && html`<a class="retour" href=${lien(['factures'])}>Voir toutes les factures</a>`}
     <div class="puces" role="group" aria-label="Affichage">
       <button type="button" class="puce" aria-pressed=${vue === 'competition'} onClick=${() => change('vue', '')}>Par compétition et par club</button>
