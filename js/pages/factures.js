@@ -37,9 +37,39 @@ function Ligne({ ctx, f }) {
   </li>`;
 }
 
+const somme = (l) => l.filter((f) => f.statut !== 'annulee').reduce((n, f) => n + f.montant_xpf, 0);
+const aReglerDe = (l) => l.filter((f) => f.statut === 'generee' || f.statut === 'envoyee').reduce((n, f) => n + f.montant_xpf, 0);
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+
+/** Factures regroupées par compétition, puis par club : ce que chaque club doit payer pour chaque compétition. */
+function ParCompetition({ ctx, liste }) {
+  const comps = new Map();
+  liste.forEach((f) => {
+    if (!comps.has(f.competition_id)) comps.set(f.competition_id, new Map());
+    const clubs = comps.get(f.competition_id);
+    if (!clubs.has(f.club_id)) clubs.set(f.club_id, { id: f.club_id, nom: f.clubNom, factures: [] });
+    clubs.get(f.club_id).factures.push(f);
+  });
+  const groupes = [...comps.entries()].map(([id, clubs]) => ({ id, comp: ctx.competitionParId.get(id), clubs: [...clubs.values()].sort((a, b) => a.nom.localeCompare(b.nom)) }))
+    .sort((a, b) => String(b.comp?.date_debut || '').localeCompare(String(a.comp?.date_debut || '')));
+  return html`<div class="resultats-comp">${groupes.map((g) => {
+    const toutes = g.clubs.flatMap((c) => c.factures);
+    return html`<${Pliable} key=${g.id} petit=${true} ouvert=${groupes.length === 1} titre=${g.comp?.nom || 'Compétition'}
+      sous=${[g.comp ? fmtDate(g.comp.date_debut) : null, pluriel(g.clubs.length, 'club'), pluriel(toutes.length, 'facture'), `${fmtXpf(somme(toutes))} au total`].filter(Boolean).join(' · ')}
+      resume=${aReglerDe(toutes) > 0 ? html`<${Pastille} genre="alerte">${fmtXpf(aReglerDe(toutes))} à régler<//>` : html`<${Pastille} genre="actif">Tout réglé<//>`}>
+      ${g.clubs.map((c) => html`<div class="facture-club" key=${c.id}>
+        <div class="facture-club-tete"><strong>${c.nom}</strong>
+          <span>${pluriel(c.factures.length, 'facture')} · <strong>${fmtXpf(somme(c.factures))}</strong>${aReglerDe(c.factures) > 0 ? html` · <em class="a-regler">${fmtXpf(aReglerDe(c.factures))} à régler</em>` : html` · réglé`}</span></div>
+        <ul class="liste-factures">${c.factures.map((f) => html`<${Ligne} key=${f.id} ctx=${ctx} f=${f} />`)}</ul>
+      </div>`)}
+    <//>`;
+  })}</div>`;
+}
+
 export function PageFactures({ ctx, route }) {
   const q = route.query;
   const statut = q.statut || 'toutes';
+  const vue = q.vue === 'liste' ? 'liste' : 'competition';
   const liste = ctx.factures
     .filter((f) => (statut === 'toutes' ? true : f.statut === statut))
     .filter((f) => (q.competition ? f.competition_id === q.competition : true))
@@ -67,7 +97,13 @@ export function PageFactures({ ctx, route }) {
         <option value="">Tous les clubs</option>${ctx.clubs.map((c) => html`<option key=${c.id} value=${c.id}>${c.nom}</option>`)}</select></div>`}
     </section>
     ${comp && html`<a class="retour" href=${lien(['factures'])}>Voir toutes les factures</a>`}
-    ${liste.length === 0 ? html`<p class="vide">Aucune facture.</p>` : html`<ul class="liste-factures">${liste.map((f) => html`<${Ligne} key=${f.id} ctx=${ctx} f=${f} />`)}</ul>`}
+    <div class="puces" role="group" aria-label="Affichage">
+      <button type="button" class="puce" aria-pressed=${vue === 'competition'} onClick=${() => change('vue', '')}>Par compétition et par club</button>
+      <button type="button" class="puce" aria-pressed=${vue === 'liste'} onClick=${() => change('vue', 'liste')}>Liste simple</button>
+    </div>
+    ${liste.length === 0 ? html`<p class="vide">Aucune facture.</p>` : vue === 'liste'
+      ? html`<ul class="liste-factures">${liste.map((f) => html`<${Ligne} key=${f.id} ctx=${ctx} f=${f} />`)}</ul>`
+      : html`<${ParCompetition} ctx=${ctx} liste=${liste} />`}
   </div>`;
 }
 

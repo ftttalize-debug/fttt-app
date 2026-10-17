@@ -451,3 +451,7 @@ a.ligne-classement:hover, a.ligne-classement:focus-visible { border-color: var(-
 .journees-restantes li strong { color: var(--brun); font-weight: 600; }
 .iban { font-weight: 600; letter-spacing: .03em; word-break: break-word; user-select: all; }
 .coordonnees-bancaires .fiche-liste { margin: 8px 0; }
+.facture-club { margin: 0 0 18px; }
+.facture-club-tete { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid var(--trait); margin-bottom: 8px; }
+.facture-club-tete span { color: var(--brun-doux); }
+.facture-club .a-regler { color: var(--brique-texte); font-style: normal; font-weight: 600; }
